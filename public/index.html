@@ -77,11 +77,29 @@
 
 <script>
 const API = '/api/products';
-const listEl = document.getElementById('list');
+
+// elementi UI
+const listEl    = document.getElementById('list');
 const filtersEl = document.getElementById('filters');
+const qInput    = document.getElementById('search-input');
+const qClear    = document.getElementById('search-clear');
+const qMeta     = document.getElementById('search-meta');
 document.getElementById('year').textContent = new Date().getFullYear();
 
-function euro(v){ return (v==null||v==='') ? '' : new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(v); }
+// dati
+let allProducts = [];
+let currentCat = null;
+
+// util
+function norm(s){
+  return (s||'').toString().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+function debounce(fn, ms=150){
+  let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); };
+}
+
+// CARD prodotto (senza prezzo)
 function card(p){
   const div = document.createElement('div');
   div.className = 'card product';
@@ -89,13 +107,13 @@ function card(p){
     <img src="${p.image_url || 'https://images.unsplash.com/photo-1551024709-8f23befc6cf7?q=80&w=1200&auto=format&fit=crop'}" alt=""/>
     <h3 style="margin:.5rem 0 0 0">${p.name}</h3>
     <div style="display:flex;justify-content:space-between;align-items:center">
-      <small class="badge">${p.category||'Gelato'}</small>
-      <strong>${euro(p.price)}</strong>
+      <small class="badge">${p.category || 'Gelato'}</small>
     </div>
   `;
   div.onclick = () => openProduct(p);
   return div;
 }
+
 function toggleModal(state){ document.getElementById('modal').classList[state?'add':'remove']('open'); }
 function openProduct(p){
   document.getElementById('m-title').textContent = p.name;
@@ -106,17 +124,79 @@ function openProduct(p){
   `;
   toggleModal(true);
 }
+
+// filtro combinato: categoria + query testo (AND su parole)
+function filterData(data, cat, q){
+  const qn = norm(q);
+  const tokens = qn.split(/\s+/).filter(Boolean);
+  return data.filter(p=>{
+    if (cat && p.category !== cat) return false;
+    if (!tokens.length) return true;
+    const hay = [p.name, p.category, p.description, p.ingredients].map(norm).join(' | ');
+    return tokens.every(t => hay.includes(t));
+  });
+}
+
+function render(rows){
+  if (!rows.length){
+    listEl.innerHTML = `<div class="empty-state">Nessun risultato. Prova con un altro termine.</div>`;
+    return;
+  }
+  listEl.innerHTML = '';
+  rows.forEach(p => listEl.appendChild(card(p)));
+}
+
+function renderMeta(q, rowsCount){
+  const total = allProducts.length;
+  if (!q) qMeta.textContent = `Mostro ${rowsCount}/${total} gusti`;
+  else    qMeta.textContent = `“${q}” · ${rowsCount} risultati su ${total}`;
+}
+
+// applica ricerca con debounce + sync URL
+const applySearch = debounce(()=>{
+  const q = qInput.value.trim();
+  const rows = filterData(allProducts, currentCat, q);
+  render(rows);
+  renderMeta(q, rows.length);
+  const url = new URL(location.href);
+  if (q) url.searchParams.set('q', q); else url.searchParams.delete('q');
+  history.replaceState(null, '', url);
+}, 150);
+
 async function load(){
   const res = await fetch(API);
-  const data = await res.json();
-  listEl.innerHTML='';
-  const cats = [...new Set(data.map(d=>d.category).filter(Boolean))];
+  allProducts = await res.json();
+
+  // costruisci filtri categoria
+  const cats = [...new Set(allProducts.map(d=>d.category).filter(Boolean))];
   filtersEl.innerHTML = ['Tutti', ...cats].map(c=>`<button class="btn" data-cat="${c}">${c}</button>`).join(' ');
-  filtersEl.onclick = (e)=>{ if(e.target.dataset.cat){ render(data, e.target.dataset.cat === 'Tutti' ? null : e.target.dataset.cat); } };
-  render(data, null);
+  filtersEl.onclick = (e)=>{
+    if (!e.target.dataset.cat) return;
+    const sel = e.target.dataset.cat;
+    currentCat = (sel === 'Tutti') ? null : sel;
+    applySearch(); // riusa la ricerca corrente
+  };
+
+  // leggi ?q= dall'URL all'avvio
+  const params = new URLSearchParams(location.search);
+  const q0 = params.get('q') || '';
+  qInput.value = q0;
+
+  const initial = filterData(allProducts, currentCat, q0);
+  render(initial);
+  renderMeta(q0, initial.length);
 }
-function render(data, cat){ listEl.innerHTML=''; data.filter(d=>!cat || d.category===cat).forEach(p=> listEl.appendChild(card(p))); }
+
+// events
+qInput.addEventListener('input', applySearch);
+qClear.addEventListener('click', ()=>{
+  qInput.value = '';
+  applySearch();
+  qInput.focus();
+});
+
 load();
 </script>
+
 </body>
 </html>
