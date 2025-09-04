@@ -22,6 +22,11 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 });
 
 app.use(cors());
+// No cache sugli HTML (utile per login/admin)
+app.use((req, res, next) => {
+  if (req.path.endsWith('.html')) res.setHeader('Cache-Control', 'no-store');
+  next();
+});
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -29,15 +34,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Healthcheck per Render
 app.get('/healthz', (req, res) => res.status(200).send('ok'));
 
-const adminUser = process.env.ADMIN_USERNAME || 'admin';
-let passwordHash;
-(async () => {
-  passwordHash = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'crema123', 10);
-})();
-
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
-
+// ====== AUTH helpers ======
 function auth(req, res, next) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
@@ -50,18 +47,50 @@ function auth(req, res, next) {
     return res.status(401).json({ error: 'Token non valido' });
   }
 }
+function requireAdmin(req, res, next) {
+  if (req.user?.role === 'admin') return next();
+  return res.status(403).json({ error: 'Solo admin' });
+}
 
-// ====================== AUTH ======================
+// ====== Admin bootstrap ======
+const adminUser = process.env.ADMIN_USERNAME || 'admin';
+let passwordHashAdmin;
+(async () => {
+  passwordHashAdmin = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'crema123', 10);
+})();
+
+// ====== AUTH: Admin ======
 app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
   if (username !== adminUser) return res.status(401).json({ error: 'Credenziali non valide' });
-  const valid = await bcrypt.compare(password, passwordHash);
+  const valid = await bcrypt.compare(password, passwordHashAdmin);
   if (!valid) return res.status(401).json({ error: 'Credenziali non valide' });
-  const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '12h' });
+  const token = jwt.sign({ role: 'admin', username }, JWT_SECRET, { expiresIn: '12h' });
   res.json({ token });
 });
 
-// ====================== PRODUCTS ======================
+// ====== AUTH: Dipendente (email + password) ======
+app.post('/api/auth/employee', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Email e password richiesti' });
+
+  const { data: emp, error } = await supabase
+    .from('employees')
+    .select('id, name, role, is_active, email, password_hash')
+    .eq('email', email)
+    .single();
+
+  if (error || !emp || !emp.is_active) return res.status(401).json({ error: 'Credenziali non valide' });
+  if (!emp.password_hash) return res.status(401).json({ error: 'Password non impostata. Contatta il manager.' });
+
+  const ok = await bcrypt.compare(password, emp.password_hash);
+  if (!ok) return res.status(401).json({ error: 'Credenziali non valide' });
+
+  const token = jwt.sign({ role: 'employee', employee_id: emp.id, name: emp.name }, JWT_SECRET, { expiresIn: '12h' });
+  res.json({ token, employee: { id: emp.id, name: emp.name, role: emp.role } });
+});
+
+// ====== PRODUCTS ======
 app.get('/api/products', async (req, res) => {
   const { data, error } = await supabase
     .from('products')
@@ -71,7 +100,7 @@ app.get('/api/products', async (req, res) => {
   res.json(data);
 });
 
-app.post('/api/products', auth, async (req, res) => {
+app.post('/api/products', auth, requireAdmin, async (req, res) => {
   const payload = req.body;
   if (!payload.name) return res.status(400).json({ error: 'Nome richiesto' });
   const { data, error } = await supabase.from('products').insert(payload).select().single();
@@ -79,7 +108,7 @@ app.post('/api/products', auth, async (req, res) => {
   res.json(data);
 });
 
-app.put('/api/products/:id', auth, async (req, res) => {
+app.put('/api/products/:id', auth, requireAdmin, async (req, res) => {
   const id = req.params.id;
   const payload = req.body;
   const { data, error } = await supabase.from('products').update(payload).eq('id', id).select().single();
@@ -87,7 +116,7 @@ app.put('/api/products/:id', auth, async (req, res) => {
   res.json(data);
 });
 
-app.delete('/api/products/:id', auth, async (req, res) => {
+app.delete('/api/products/:id', auth, requireAdmin, async (req, res) => {
   const id = req.params.id;
   const { error } = await supabase.from('products').delete().eq('id', id);
   if (error) return res.status(500).json({ error: error.message });
@@ -95,7 +124,9 @@ app.delete('/api/products/:id', auth, async (req, res) => {
 });
 
 // Upload immagine → Supabase Storage
-app.post('/api/upload', auth, upload.single('image'), async (req, res) => {
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+app.post('/api/upload', auth, requireAdmin, upload.single('image'), async (req, res) => {
   try {
     const file = req.file;
     if (!file) return res.status(400).json({ error: 'Nessun file caricato' });
@@ -113,51 +144,72 @@ app.post('/api/upload', auth, upload.single('image'), async (req, res) => {
   }
 });
 
-// ====================== EMPLOYEES ======================
+// ====== EMPLOYEES ======
+// GET: Admin vede anche email, i dipendenti vedono solo (id,name,role,is_active)
 app.get('/api/employees', auth, async (req, res) => {
-  const { data, error } = await supabase
-    .from('employees')
-    .select('*')
-    .order('is_active', { ascending: false })
-    .order('name', { ascending: true });
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
+  if (req.user.role === 'admin') {
+    const { data, error } = await supabase
+      .from('employees')
+      .select('id, name, role, is_active, email, created_at')
+      .order('is_active', { ascending: false })
+      .order('name', { ascending: true });
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json(data);
+  } else {
+    const { data, error } = await supabase
+      .from('employees')
+      .select('id, name, role, is_active')
+      .order('is_active', { ascending: false })
+      .order('name', { ascending: true });
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json(data);
+  }
 });
 
-app.post('/api/employees', auth, async (req, res) => {
-  const { name, role, is_active = true } = req.body;
+// POST: crea dipendente (admin). Se arriva password, viene hashata.
+app.post('/api/employees', auth, requireAdmin, async (req, res) => {
+  const { name, role, is_active = true, email, password, is_manager = false } = req.body;
   if (!name) return res.status(400).json({ error: 'Nome richiesto' });
+  let password_hash = null;
+  if (password) password_hash = await bcrypt.hash(password, 10);
+
   const { data, error } = await supabase
     .from('employees')
-    .insert({ name, role, is_active })
-    .select()
+    .insert({ name, role, is_active, email: email || null, password_hash, is_manager })
+    .select('id, name, role, is_active, email')
     .single();
+
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 
-app.put('/api/employees/:id', auth, async (req, res) => {
+// PUT: aggiorna dipendente (admin). Per reset password, passare { new_password }
+app.put('/api/employees/:id', auth, requireAdmin, async (req, res) => {
   const id = req.params.id;
-  const { name, role, is_active } = req.body;
+  const { name, role, is_active, email, new_password, is_manager } = req.body;
+  const update = { name, role, is_active, email, is_manager };
+  if (new_password) update.password_hash = await bcrypt.hash(new_password, 10);
+
   const { data, error } = await supabase
     .from('employees')
-    .update({ name, role, is_active })
+    .update(update)
     .eq('id', id)
-    .select()
+    .select('id, name, role, is_active, email')
     .single();
+
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 
-app.delete('/api/employees/:id', auth, async (req, res) => {
+app.delete('/api/employees/:id', auth, requireAdmin, async (req, res) => {
   const id = req.params.id;
   const { error } = await supabase.from('employees').delete().eq('id', id);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ success: true });
 });
 
-// ====================== SHIFTS ======================
-// Lista per intervallo (from/to YYYY-MM-DD), opzionale filtro employee_id
+// ====== SHIFTS ======
+// lettura libera a chi è autenticato (admin o dipendente)
 app.get('/api/shifts', auth, async (req, res) => {
   const { from, to, employee_id } = req.query;
   let q = supabase
@@ -175,14 +227,13 @@ app.get('/api/shifts', auth, async (req, res) => {
   res.json(data);
 });
 
-app.post('/api/shifts', auth, async (req, res) => {
+// mutazioni solo admin
+app.post('/api/shifts', auth, requireAdmin, async (req, res) => {
   const { employee_id, work_date, start_time, end_time, break_minutes = 0, notes } = req.body;
   if (!employee_id || !work_date || !start_time || !end_time) {
     return res.status(400).json({ error: 'Campi obbligatori mancanti' });
   }
-
-  // controllo semplice di sovrapposizione turni dello stesso dipendente nello stesso giorno:
-  // esiste un turno con start < new_end AND end > new_start
+  // controllo sovrapposizione
   const { data: conflict, error: errOverlap } = await supabase
     .from('shifts')
     .select('id')
@@ -206,11 +257,9 @@ app.post('/api/shifts', auth, async (req, res) => {
   res.json(data);
 });
 
-app.put('/api/shifts/:id', auth, async (req, res) => {
+app.put('/api/shifts/:id', auth, requireAdmin, async (req, res) => {
   const id = req.params.id;
   const { employee_id, work_date, start_time, end_time, break_minutes = 0, notes } = req.body;
-
-  // (opzionale) stesso controllo sovrapposizione escludendo il record stesso
   const { data: conflict, error: errOverlap } = await supabase
     .from('shifts')
     .select('id')
@@ -236,24 +285,14 @@ app.put('/api/shifts/:id', auth, async (req, res) => {
   res.json(data);
 });
 
-app.delete('/api/shifts/:id', auth, async (req, res) => {
+app.delete('/api/shifts/:id', auth, requireAdmin, async (req, res) => {
   const id = req.params.id;
   const { error } = await supabase.from('shifts').delete().eq('id', id);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ success: true });
 });
-// Disabilita cache per i file HTML
-app.use((req, res, next) => {
-  if (req.path.endsWith('.html')) {
-    res.setHeader('Cache-Control', 'no-store');
-  }
-  next();
-});
 
-
-
-
-// ✅ Fallback universale senza wildcard (compatibile Express 5)
+// Fallback universale (no wildcard)
 app.use((req, res, next) => {
   if (req.method !== 'GET') return next();
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
