@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>CREMA – Alta Gelateria</title>
+  <link rel="stylesheet" href="/styles.css"/>
+  <!-- Favicon -->
+<link rel="icon" type="image/svg+xml" href="https://gelatocrema.com/cdn/shop/files/logo_color.svg?v=1693061670&width=100">
+<link rel="alternate icon" href="/favicon.ico">
+
+</head>
+<body>
+  <header class="nav">
+  <div class="nav-inner container">
+    <!-- Logo -->
+    <a href="/" class="brand">
+      <img src="https://gelatocrema.com/cdn/shop/files/logo_color.svg?v=1693061670&width=100" 
+           alt="CREMA Logo" 
+           style="height:50px; width:auto;">
+    </a>
+
+    <!-- Pulsanti a destra -->
+    <div style="margin-left:auto; display:flex; gap:10px;">
+      <button class="btn" onclick="location.href='https://gelatocrema.com/pages/boutiques'">boutiques</button>
+      <button class="btn primary" onclick="location.href='/admin.html'">Login</button>
+    </div>
+  </div>
+</header>
+
+  <main class="container">
+    <section class="hero">
+      <div>
+        <h1 class="cormorant">CREMA</h1>
+        <p class="badge">ALTA GELATERIA</p>
+        <p class="subtitle">Ingredienti selezionati, gusto autentico. Scopri il nostro menu aggiornato in tempo reale.</p>
+        <a class="btn primary" href="#menu">Ingredienti</a>
+      </div>
+      <div class="card">
+        <img src="https://images.unsplash.com/photo-1499636136210-6f4ee915583e?q=80&w=1200&auto=format&fit=crop" alt="Gelato artigianale" style="border-radius:12px">
+      </div>
+    </section>
+
+    <section id="menu">
+      <h2 class="cormorant">Menu</h2>
+      <div id="filters" style="margin:12px 0"></div>
+      <div id="list" class="grid"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    © <span id="year" ></span> CREMA – Alta Gelateria  
+  </footer>
+
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <strong id="m-title"></strong>
+        <button class="btn" onclick="toggleModal(false)">Chiudi</button>
+      </div>
+      <div class="modal-body" id="m-body"></div>
+    </div>
+  </div>
+
+<script>
+const API = '/api/products';
+const listEl = document.getElementById('list');
+const filtersEl = document.getElementById('filters');
+document.getElementById('year').textContent = new Date().getFullYear();
+
+function euro(v){ return (v==null||v==='') ? '' : new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(v); }
+function card(p){
+  const div = document.createElement('div');
+  div.className = 'card product';
+  div.innerHTML = `
+    <img src="${p.image_url || 'https://images.unsplash.com/photo-1551024709-8f23befc6cf7?q=80&w=1200&auto=format&fit=crop'}" alt=""/>
+    <h3 style="margin:.5rem 0 0 0">${p.name}</h3>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <small class="badge">${p.category||'Gelato'}</small>
+      <strong>${euro(p.price)}</strong>
+    </div>
+  `;
+  div.onclick = () => openProduct(p);
+  return div;
+}
+function toggleModal(state){ document.getElementById('modal').classList[state?'add':'remove']('open'); }
+function openProduct(p){
+  document.getElementById('m-title').textContent = p.name;
+  document.getElementById('m-body').innerHTML = `
+    <img src="${p.image_url || 'https://images.unsplash.com/photo-1551024709-8f23befc6cf7?q=80&w=1200&auto=format&fit=crop'}" alt="" style="width:100%;height:240px;object-fit:cover;border-radius:12px"/>
+    <p style="margin-top:8px">${p.description || ''}</p>
+    <p><strong>Ingredienti:</strong> ${p.ingredients || '—'}</p>
+  `;
+  toggleModal(true);
+}
+async function load(){
+  const res = await fetch(API);
+  const data = await res.json();
+  listEl.innerHTML='';
+  const cats = [...new Set(data.map(d=>d.category).filter(Boolean))];
+  filtersEl.innerHTML = ['Tutti', ...cats].map(c=>`<button class="btn" data-cat="${c}">${c}</button>`).join(' ');
+  filtersEl.onclick = (e)=>{ if(e.target.dataset.cat){ render(data, e.target.dataset.cat === 'Tutti' ? null : e.target.dataset.cat); } };
+  render(data, null);
+}
+function render(data, cat){ listEl.innerHTML=''; data.filter(d=>!cat || d.category===cat).forEach(p=> listEl.appendChild(card(p))); }
+load();
+</script>
+</body>
+</html>
