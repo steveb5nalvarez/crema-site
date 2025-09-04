@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>CREMA – Login Dipendente</title>
+  <link rel="stylesheet" href="/styles.css"/>
+  <link rel="icon" type="image/svg+xml" href="https://gelatocrema.com/cdn/shop/files/logo_color.svg?v=1693061670&width=100">
+  <link rel="alternate icon" href="/favicon.ico">
+  <style>
+    .login-card { max-width: 420px; margin: 40px auto; }
+    .login-card input { width: 100%; padding: 12px 14px; border:1px solid rgba(0,0,0,.12); border-radius:10px; }
+    .login-card .row { display:flex; gap:10px; flex-direction:column; }
+  </style>
+</head>
+<body class="admin">
+<header class="nav">
+  <div class="nav-inner container">
+    <a href="/" class="brand">
+      <img src="https://gelatocrema.com/cdn/shop/files/logo_color.svg?v=1693061670&width=100" alt="CREMA" style="height:40px;width:auto">
+    </a>
+  </div>
+</header>
+
+<main class="container admin-main">
+  <h1 class="cormorant">Login Dipendente</h1>
+  <section class="card login-card">
+    <div class="row">
+      <input id="email" type="email" placeholder="Email">
+      <input id="password" type="password" placeholder="Password">
+      <button class="btn primary" onclick="doLogin()">Entra</button>
+      <div id="msg" style="color:#b00020; min-height:1.2em;"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+async function doLogin(){
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value.trim();
+  const msg = document.getElementById('msg');
+  msg.textContent = '';
+
+  try {
+    const res = await fetch('/api/auth/employee', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (data.error) { msg.textContent = data.error; return; }
+    localStorage.setItem('token', data.token);
+    location.href = '/employee.html';
+  } catch {
+    msg.textContent = 'Errore di rete';
+  }
+}
+</script>
+</body>
+</html>
