@@ -5,13 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>CREMA – Turni (Admin)</title>
   <link rel="stylesheet" href="/styles.css"/>
+  <link rel="icon" type="image/svg+xml" href="https://gelatocrema.com/cdn/shop/files/logo_color.svg?v=1693061670&width=100">
+  <link rel="alternate icon" href="/favicon.ico">
+  <style>
+    .table { width:100%; border-collapse: collapse; }
+    .table th, .table td { border-bottom:1px solid rgba(0,0,0,.08); padding:8px; }
+    .table th { text-align:left; color:#666; font-weight:600; }
+    .pill { background:#fff; border:1px solid rgba(0,0,0,.08); border-radius:10px; padding:8px 10px; }
+    input[type="date"], input[type="time"], input[type="number"], input[type="text"], select {
+      padding:8px 10px; border:1px solid rgba(0,0,0,.12); border-radius:8px;
+    }
+  </style>
 </head>
 <body>
 <header class="nav">
   <div class="nav-inner container">
-    <a href="/" class="brand">CREMA</a>
+    <a href="/" class="brand">
+      <img src="https://gelatocrema.com/cdn/shop/files/logo_color.svg?v=1693061670&width=100" alt="CREMA" style="height:40px;width:auto">
+    </a>
     <div style="margin-left:auto;display:flex;gap:10px">
       <button class="btn" onclick="location.href='/admin.html'">Prodotti</button>
+      <button class="btn" onclick="location.href='/employee.html'">Area dipendente</button>
       <button class="btn primary" onclick="logout()">Logout</button>
     </div>
   </div>
@@ -60,7 +74,7 @@
     </div>
   </section>
 
-  <!-- Calendario settimanale semplice -->
+  <!-- Calendario settimanale -->
   <section style="margin-top:1rem">
     <div id="calendar"></div>
   </section>
@@ -77,7 +91,7 @@ function authHeader(){
 }
 function logout(){ localStorage.removeItem('token'); location.href='/admin.html'; }
 
-// ======= Utils data =======
+// Utils data
 function toISO(d){ return d.toISOString().slice(0,10); }
 function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
 function startOfWeek(d){ const x=new Date(d); const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day); x.setHours(0,0,0,0); return x; } // lunedì
@@ -87,10 +101,12 @@ let employees = [];
 let shifts = [];
 let week = startOfWeek(new Date());
 
-// ======= Dipendenti =======
+// Dipendenti
 async function loadEmployees(){
   const res = await fetch(API.employees, {headers: { ...authHeader() }});
-  employees = await res.json();
+  const data = await res.json();
+  if (data.error) { alert(data.error); return; }
+  employees = data;
   renderEmployees();
   fillEmpSelect();
 }
@@ -148,11 +164,11 @@ async function delEmployee(id){
   loadEmployees(); loadWeek();
 }
 
-// ======= Turni =======
+// Turni
 function setWeek(d){
   week = startOfWeek(d);
-  document.getElementById('weekStart').value = toISO(week);
   const end = addDays(week,6);
+  document.getElementById('weekStart').value = toISO(week);
   document.getElementById('rangeLabel').textContent = `${toISO(week)} → ${toISO(end)}`;
 }
 function prevWeek(){ setWeek(addDays(week,-7)); loadWeek(); }
@@ -163,7 +179,9 @@ async function loadWeek(){
   const from = toISO(week);
   const to = toISO(addDays(week,6));
   const res = await fetch(`${API.shifts}?from=${from}&to=${to}`, {headers:{ ...authHeader() }});
-  shifts = await res.json();
+  const data = await res.json();
+  if (data.error) { alert(data.error); return; }
+  shifts = data;
   renderCalendar();
 }
 
@@ -192,10 +210,11 @@ async function delShift(id){
   loadWeek();
 }
 
+function hhmmLocal(t){ return (t||'').slice(0,5); }
+
 function renderCalendar(){
   const cal = document.getElementById('calendar');
   const days = Array.from({length:7}).map((_,i)=> toISO(addDays(week,i)));
-  // header
   let html = `<div class="grid" style="grid-template-columns: repeat(7, 1fr); gap:12px">`;
   days.forEach(d=>{
     const items = shifts.filter(s=> s.work_date===d);
@@ -206,7 +225,7 @@ function renderCalendar(){
       html += `<div class="pill" style="display:flex;justify-content:space-between;gap:8px;align-items:center">
         <div>
           <div><strong>${emp.name||'—'}</strong> ${emp.role?`<small class="badge">${emp.role}</small>`:''}</div>
-          <div><small>${hhmm(s.start_time)}–${hhmm(s.end_time)} ${s.break_minutes?`• pausa ${s.break_minutes}’`:''}</small></div>
+          <div><small>${hhmmLocal(s.start_time)}–${hhmmLocal(s.end_time)} ${s.break_minutes?`• pausa ${s.break_minutes}’`:''}</small></div>
           ${s.notes?`<div style="color:#666"><small>${s.notes}</small></div>`:''}
         </div>
         <button class="btn" onclick="delShift(${s.id})">Elimina</button>
