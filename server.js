@@ -242,6 +242,16 @@ app.delete('/api/shifts/:id', auth, async (req, res) => {
   if (error) return res.status(500).json({ error: error.message });
   res.json({ success: true });
 });
+// Disabilita cache per i file HTML
+app.use((req, res, next) => {
+  if (req.path.endsWith('.html')) {
+    res.setHeader('Cache-Control', 'no-store');
+  }
+  next();
+});
+
+
+
 
 // ✅ Fallback universale senza wildcard (compatibile Express 5)
 app.use((req, res, next) => {
