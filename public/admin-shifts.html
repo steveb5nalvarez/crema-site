@@ -49,14 +49,17 @@
   <!-- Gestione dipendenti -->
   <section class="card" style="margin-bottom:1rem">
     <h3>Dipendenti</h3>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <input id="e-name" placeholder="Nome e cognome"/>
-      <input id="e-role" placeholder="Ruolo (es. Bancone)"/>
-      <label style="display:flex;gap:6px;align-items:center">
-        <input type="checkbox" id="e-active" checked/> Attivo
-      </label>
-      <button class="btn primary" onclick="addEmployee()">Aggiungi</button>
-    </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+  <input id="e-name" placeholder="Nome e cognome"/>
+  <input id="e-role" placeholder="Ruolo (es. Bancone)"/>
+  <input id="e-email" type="email" placeholder="Email"/>
+  <input id="e-pass" type="password" placeholder="Password iniziale"/>
+  <label style="display:flex;gap:6px;align-items:center">
+    <input type="checkbox" id="e-active" checked/> Attivo
+  </label>
+  <button class="btn primary" onclick="addEmployee()">Aggiungi</button>
+</div>
+  
     <table id="empTable" class="table" style="margin-top:10px"></table>
   </section>
 
