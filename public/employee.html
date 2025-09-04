@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>CREMA – I miei turni</title>
+  <link rel="stylesheet" href="/styles.css"/>
+</head>
+<body>
+<header class="nav">
+  <div class="nav-inner container">
+    <a href="/" class="brand">CREMA</a>
+  </div>
+</header>
+
+<main class="container">
+  <h1 class="cormorant">I miei turni</h1>
+
+  <section class="card" style="margin-bottom:1rem">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <select id="emp"></select>
+      <input type="date" id="day"/>
+      <button class="btn" onclick="prevDay()">◀</button>
+      <button class="btn" onclick="today()">Oggi</button>
+      <button class="btn" onclick="nextDay()">▶</button>
+    </div>
+  </section>
+
+  <section id="mine" class="card" style="margin-bottom:1rem">
+    <h3>Il mio turno</h3>
+    <div id="myShift" style="color:#666">— nessun turno —</div>
+  </section>
+
+  <section class="card">
+    <h3>Colleghi oggi</h3>
+    <div id="mates" style="color:#666">— nessun turno —</div>
+  </section>
+</main>
+
+<script>
+const API = { employees:'/api/employees', shifts:'/api/shifts' };
+const empSel = document.getElementById('emp');
+const dayInp = document.getElementById('day');
+const myDiv = document.getElementById('myShift');
+const matesDiv = document.getElementById('mates');
+
+function authHeader(){
+  const t = localStorage.getItem('token');
+  return t ? { 'Authorization': 'Bearer ' + t } : {};
+}
+
+function toISO(d){ return d.toISOString().slice(0,10); }
+function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+function hhmm(t){ return (t||'').slice(0,5); }
+
+let employees=[]; let day = new Date();
+
+async function loadEmployees(){
+  const res = await fetch(API.employees, {headers:{...authHeader()}});
+  employees = await res.json();
+  empSel.innerHTML = employees.filter(e=>e.is_active).map(e=>`<option value="${e.id}">${e.name}${e.role?(' ('+e.role+')'):''}</option>`).join('');
+}
+
+async function loadDay(){
+  const from = toISO(day);
+  const res = await fetch(`${API.shifts}?from=${from}&to=${from}`, {headers:{...authHeader()}});
+  const all = await res.json();
+  const me = all.filter(s => String(s.employee_id) === String(empSel.value));
+  myDiv.innerHTML = me.length
+    ? me.map(s=>`<div><strong>${hhmm(s.start_time)}–${hhmm(s.end_time)}</strong> ${s.break_minutes?`• pausa ${s.break_minutes}’`:''} ${s.notes?`<small>• ${s.notes}</small>`:''}</div>`).join('')
+    : '— nessun turno —';
+
+  const mates = all.filter(s => String(s.employee_id) !== String(empSel.value));
+  matesDiv.innerHTML = mates.length
+    ? mates.map(s=>`<div><strong>${s.employees?.name||'—'}</strong> <small>${hhmm(s.start_time)}–${hhmm(s.end_time)}</small>${s.employees?.role?` <span class="badge">${s.employees.role}</span>`:''}</div>`).join('')
+    : '— nessun turno —';
+}
+
+function prevDay(){ day = addDays(day,-1); dayInp.value = toISO(day); loadDay(); }
+function nextDay(){ day = addDays(day, 1); dayInp.value = toISO(day); loadDay(); }
+function today(){ day = new Date(); dayInp.value = toISO(day); loadDay(); }
+
+async function init(){
+  const t = localStorage.getItem('token');
+  if(!t){ alert('Accedi come admin per usare questa pagina'); location.href='/admin.html'; return; }
+  await loadEmployees();
+  dayInp.value = toISO(day);
+  empSel.addEventListener('change', loadDay);
+  dayInp.addEventListener('change', ()=>{ day = new Date(dayInp.value); loadDay(); });
+  loadDay();
+}
+init();
+</script>
+</body>
+</html>
