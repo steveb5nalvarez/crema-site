@@ -17,7 +17,7 @@
     }
   </style>
 </head>
-<body>
+<body class="admin">
 <header class="nav">
   <div class="nav-inner container">
     <a href="/" class="brand">
@@ -81,27 +81,40 @@
 </main>
 
 <script>
-const API = {
-  employees: '/api/employees',
-  shifts: '/api/shifts'
-};
+/* ======== AUTH ======== */
 function authHeader(){
   const t = localStorage.getItem('token');
   return t ? { 'Authorization': 'Bearer ' + t } : {};
 }
-function logout(){ localStorage.removeItem('token'); location.href='/admin.html'; }
+function logout(){
+  localStorage.removeItem('token');
+  location.href = '/login.html';   // redirect corretto
+}
 
-// Utils data
+/* ======== API ======== */
+const API = {
+  employees: '/api/employees',
+  shifts: '/api/shifts'
+};
+
+/* ======== DATE UTILS ======== */
 function toISO(d){ return d.toISOString().slice(0,10); }
 function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
-function startOfWeek(d){ const x=new Date(d); const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day); x.setHours(0,0,0,0); return x; } // lunedì
-function hhmm(t){ return (t||'').slice(0,5); }
+function startOfWeek(d){
+  const x=new Date(d);
+  const day=(x.getDay()+6)%7; // lun=0
+  x.setDate(x.getDate()-day);
+  x.setHours(0,0,0,0);
+  return x;
+}
+function hhmmLocal(t){ return (t||'').slice(0,5); }
 
+/* ======== VARIABILI ======== */
 let employees = [];
 let shifts = [];
 let week = startOfWeek(new Date());
 
-// Dipendenti
+/* ======== DIPENDENTI ======== */
 async function loadEmployees(){
   const res = await fetch(API.employees, {headers: { ...authHeader() }});
   const data = await res.json();
@@ -164,7 +177,7 @@ async function delEmployee(id){
   loadEmployees(); loadWeek();
 }
 
-// Turni
+/* ======== TURNI ======== */
 function setWeek(d){
   week = startOfWeek(d);
   const end = addDays(week,6);
@@ -184,7 +197,6 @@ async function loadWeek(){
   shifts = data;
   renderCalendar();
 }
-
 async function addShift(){
   const payload = {
     employee_id: document.getElementById('s-emp').value,
@@ -201,7 +213,6 @@ async function addShift(){
   document.getElementById('s-date').value=''; document.getElementById('s-start').value=''; document.getElementById('s-end').value=''; document.getElementById('s-break').value=''; document.getElementById('s-notes').value='';
   loadWeek();
 }
-
 async function delShift(id){
   if(!confirm('Eliminare turno?')) return;
   const res = await fetch(API.shifts+'/'+id, {method:'DELETE', headers:{ ...authHeader() }});
@@ -209,9 +220,6 @@ async function delShift(id){
   if(data.error) return alert(data.error);
   loadWeek();
 }
-
-function hhmmLocal(t){ return (t||'').slice(0,5); }
-
 function renderCalendar(){
   const cal = document.getElementById('calendar');
   const days = Array.from({length:7}).map((_,i)=> toISO(addDays(week,i)));
@@ -237,10 +245,10 @@ function renderCalendar(){
   cal.innerHTML = html;
 }
 
-// init
+/* ======== INIT ======== */
 function init(){
   const t = localStorage.getItem('token');
-  if(!t){ location.href='/admin.html'; return; }
+  if(!t){ location.href='/login.html'; return; }  // redirect corretto
   setWeek(new Date());
   document.getElementById('weekStart').addEventListener('change', e=>{ setWeek(new Date(e.target.value)); loadWeek(); });
   loadEmployees().then(()=> loadWeek());
