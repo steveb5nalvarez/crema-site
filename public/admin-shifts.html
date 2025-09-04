@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>CREMA – Turni (Admin)</title>
+  <link rel="stylesheet" href="/styles.css"/>
+</head>
+<body>
+<header class="nav">
+  <div class="nav-inner container">
+    <a href="/" class="brand">CREMA</a>
+    <div style="margin-left:auto;display:flex;gap:10px">
+      <button class="btn" onclick="location.href='/admin.html'">Prodotti</button>
+      <button class="btn primary" onclick="logout()">Logout</button>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <h1 class="cormorant">Calendario turni</h1>
+
+  <!-- Settimana -->
+  <section class="card" style="margin-bottom:1rem">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <label>Settimana di:</label>
+      <input type="date" id="weekStart"/>
+      <button class="btn" onclick="prevWeek()">◀</button>
+      <button class="btn" onclick="thisWeek()">Oggi</button>
+      <button class="btn" onclick="nextWeek()">▶</button>
+      <span id="rangeLabel" style="margin-left:auto;color:#666"></span>
+    </div>
+  </section>
+
+  <!-- Gestione dipendenti -->
+  <section class="card" style="margin-bottom:1rem">
+    <h3>Dipendenti</h3>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <input id="e-name" placeholder="Nome e cognome"/>
+      <input id="e-role" placeholder="Ruolo (es. Bancone)"/>
+      <label style="display:flex;gap:6px;align-items:center">
+        <input type="checkbox" id="e-active" checked/> Attivo
+      </label>
+      <button class="btn primary" onclick="addEmployee()">Aggiungi</button>
+    </div>
+    <table id="empTable" class="table" style="margin-top:10px"></table>
+  </section>
+
+  <!-- Nuovo turno -->
+  <section class="card">
+    <h3>Nuovo turno</h3>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <select id="s-emp"></select>
+      <input type="date" id="s-date"/>
+      <input type="time" id="s-start"/>
+      <input type="time" id="s-end"/>
+      <input type="number" id="s-break" placeholder="Pausa (min)" min="0" step="5" style="width:140px"/>
+      <input type="text" id="s-notes" placeholder="Note (opzionale)" style="flex:1"/>
+      <button class="btn primary" onclick="addShift()">Aggiungi turno</button>
+    </div>
+  </section>
+
+  <!-- Calendario settimanale semplice -->
+  <section style="margin-top:1rem">
+    <div id="calendar"></div>
+  </section>
+</main>
+
+<script>
+const API = {
+  employees: '/api/employees',
+  shifts: '/api/shifts'
+};
+function authHeader(){
+  const t = localStorage.getItem('token');
+  return t ? { 'Authorization': 'Bearer ' + t } : {};
+}
+function logout(){ localStorage.removeItem('token'); location.href='/admin.html'; }
+
+// ======= Utils data =======
+function toISO(d){ return d.toISOString().slice(0,10); }
+function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+function startOfWeek(d){ const x=new Date(d); const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day); x.setHours(0,0,0,0); return x; } // lunedì
+function hhmm(t){ return (t||'').slice(0,5); }
+
+let employees = [];
+let shifts = [];
+let week = startOfWeek(new Date());
+
+// ======= Dipendenti =======
+async function loadEmployees(){
+  const res = await fetch(API.employees, {headers: { ...authHeader() }});
+  employees = await res.json();
+  renderEmployees();
+  fillEmpSelect();
+}
+function renderEmployees(){
+  const el = document.getElementById('empTable');
+  el.innerHTML = '<tr><th>Nome</th><th>Ruolo</th><th>Attivo</th><th>Azioni</th></tr>';
+  employees.forEach(e=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input value="${e.name||''}" data-id="${e.id}" data-k="name"/></td>
+      <td><input value="${e.role||''}" data-id="${e.id}" data-k="role"/></td>
+      <td style="text-align:center"><input type="checkbox" ${e.is_active?'checked':''} data-id="${e.id}" data-k="is_active"/></td>
+      <td>
+        <button class="btn" onclick="saveEmployee(${e.id})">Salva</button>
+        <button class="btn" onclick="delEmployee(${e.id})">Elimina</button>
+      </td>`;
+    el.appendChild(tr);
+  });
+}
+function fillEmpSelect(){
+  const sel = document.getElementById('s-emp');
+  sel.innerHTML = employees.filter(e=>e.is_active).map(e=>`<option value="${e.id}">${e.name} ${e.role?('('+e.role+')'):''}</option>`).join('') || '<option value="">— Nessun dipendente —</option>';
+}
+async function addEmployee(){
+  const payload = {
+    name: document.getElementById('e-name').value.trim(),
+    role: document.getElementById('e-role').value.trim(),
+    is_active: document.getElementById('e-active').checked
+  };
+  if(!payload.name) return alert('Nome richiesto');
+  const res = await fetch(API.employees, {method:'POST', headers:{'Content-Type':'application/json', ...authHeader()}, body: JSON.stringify(payload)});
+  const data = await res.json();
+  if(data.error) return alert(data.error);
+  document.getElementById('e-name').value=''; document.getElementById('e-role').value=''; document.getElementById('e-active').checked=true;
+  loadEmployees();
+}
+async function saveEmployee(id){
+  const inputs = Array.from(document.querySelectorAll(`[data-id="${id}"]`));
+  const body = {};
+  inputs.forEach(i=>{
+    const k=i.dataset.k;
+    body[k] = (i.type==='checkbox') ? i.checked : i.value;
+    if(k==='is_active') body[k] = !!i.checked;
+  });
+  const res = await fetch(API.employees+'/'+id, {method:'PUT', headers:{'Content-Type':'application/json', ...authHeader()}, body: JSON.stringify(body)});
+  const data = await res.json();
+  if(data.error) return alert(data.error);
+  loadEmployees();
+}
+async function delEmployee(id){
+  if(!confirm('Eliminare dipendente?')) return;
+  const res = await fetch(API.employees+'/'+id, {method:'DELETE', headers:{ ...authHeader() }});
+  const data = await res.json();
+  if(data.error) return alert(data.error);
+  loadEmployees(); loadWeek();
+}
+
+// ======= Turni =======
+function setWeek(d){
+  week = startOfWeek(d);
+  document.getElementById('weekStart').value = toISO(week);
+  const end = addDays(week,6);
+  document.getElementById('rangeLabel').textContent = `${toISO(week)} → ${toISO(end)}`;
+}
+function prevWeek(){ setWeek(addDays(week,-7)); loadWeek(); }
+function nextWeek(){ setWeek(addDays(week, 7)); loadWeek(); }
+function thisWeek(){ setWeek(new Date()); loadWeek(); }
+
+async function loadWeek(){
+  const from = toISO(week);
+  const to = toISO(addDays(week,6));
+  const res = await fetch(`${API.shifts}?from=${from}&to=${to}`, {headers:{ ...authHeader() }});
+  shifts = await res.json();
+  renderCalendar();
+}
+
+async function addShift(){
+  const payload = {
+    employee_id: document.getElementById('s-emp').value,
+    work_date: document.getElementById('s-date').value,
+    start_time: document.getElementById('s-start').value,
+    end_time: document.getElementById('s-end').value,
+    break_minutes: parseInt(document.getElementById('s-break').value||'0',10),
+    notes: document.getElementById('s-notes').value.trim()
+  };
+  if(!payload.employee_id || !payload.work_date || !payload.start_time || !payload.end_time) return alert('Completa tutti i campi obbligatori');
+  const res = await fetch(API.shifts, {method:'POST', headers:{'Content-Type':'application/json', ...authHeader()}, body: JSON.stringify(payload)});
+  const data = await res.json();
+  if(data.error) return alert(data.error);
+  document.getElementById('s-date').value=''; document.getElementById('s-start').value=''; document.getElementById('s-end').value=''; document.getElementById('s-break').value=''; document.getElementById('s-notes').value='';
+  loadWeek();
+}
+
+async function delShift(id){
+  if(!confirm('Eliminare turno?')) return;
+  const res = await fetch(API.shifts+'/'+id, {method:'DELETE', headers:{ ...authHeader() }});
+  const data = await res.json();
+  if(data.error) return alert(data.error);
+  loadWeek();
+}
+
+function renderCalendar(){
+  const cal = document.getElementById('calendar');
+  const days = Array.from({length:7}).map((_,i)=> toISO(addDays(week,i)));
+  // header
+  let html = `<div class="grid" style="grid-template-columns: repeat(7, 1fr); gap:12px">`;
+  days.forEach(d=>{
+    const items = shifts.filter(s=> s.work_date===d);
+    html += `<div class="card"><strong>${d}</strong><div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">`;
+    if(!items.length) html += `<div style="color:#999">— nessun turno —</div>`;
+    items.forEach(s=>{
+      const emp = s.employees || {name:'—'};
+      html += `<div class="pill" style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+        <div>
+          <div><strong>${emp.name||'—'}</strong> ${emp.role?`<small class="badge">${emp.role}</small>`:''}</div>
+          <div><small>${hhmm(s.start_time)}–${hhmm(s.end_time)} ${s.break_minutes?`• pausa ${s.break_minutes}’`:''}</small></div>
+          ${s.notes?`<div style="color:#666"><small>${s.notes}</small></div>`:''}
+        </div>
+        <button class="btn" onclick="delShift(${s.id})">Elimina</button>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+  html += `</div>`;
+  cal.innerHTML = html;
+}
+
+// init
+function init(){
+  const t = localStorage.getItem('token');
+  if(!t){ location.href='/admin.html'; return; }
+  setWeek(new Date());
+  document.getElementById('weekStart').addEventListener('change', e=>{ setWeek(new Date(e.target.value)); loadWeek(); });
+  loadEmployees().then(()=> loadWeek());
+}
+init();
+</script>
+</body>
+</html>
