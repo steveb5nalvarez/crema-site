@@ -40,12 +40,25 @@
         <img src="https://qcjcialudtbyyrvndvlq.supabase.co/storage/v1/object/public/crema-images/sf.png" alt="Gelato artigianale" style="border-radius:12px">
       </div>
     </section>
+      <section id="menu">
+  <h2 class="cormorant">Menu</h2>
 
-    <section id="menu">
-      <h2 class="cormorant">Menu</h2>
-      <div id="filters" style="margin:12px 0"></div>
-      <div id="list" class="grid"></div>
-    </section>
+  <!-- Barra di ricerca -->
+  <section class="container" style="margin-top: var(--spacing-20);">
+    <div class="search-wrap">
+      <input id="search-input" type="search"
+             placeholder="Cerca gusti, ingredienti o categorie… (es. pistacchio salato, sorbetto limone)">
+      <button id="search-clear" class="btn" type="button" aria-label="Pulisci ricerca">Pulisci</button>
+    </div>
+    <div id="search-meta" class="search-meta"></div>
+  </section>
+
+  <!-- Filtri per categoria -->
+  <div id="filters" style="margin:12px 0"></div>
+
+  <!-- Lista prodotti -->
+  <div id="list" class="grid"></div>
+</section>
   </main>
 
   <footer class="footer">
