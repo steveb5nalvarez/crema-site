@@ -5,11 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>CREMA – I miei turni</title>
   <link rel="stylesheet" href="/styles.css"/>
+  <link rel="icon" type="image/svg+xml" href="https://gelatocrema.com/cdn/shop/files/logo_color.svg?v=1693061670&width=100">
+  <link rel="alternate icon" href="/favicon.ico">
+  <style>
+    .pill { background:#fff; border:1px solid rgba(0,0,0,.08); border-radius:10px; padding:8px 10px; }
+    input[type="date"], select { padding:8px 10px; border:1px solid rgba(0,0,0,.12); border-radius:8px; }
+  </style>
 </head>
 <body>
 <header class="nav">
   <div class="nav-inner container">
-    <a href="/" class="brand">CREMA</a>
+    <a href="/" class="brand">
+      <img src="https://gelatocrema.com/cdn/shop/files/logo_color.svg?v=1693061670&width=100" alt="CREMA" style="height:40px;width:auto">
+    </a>
   </div>
 </header>
 
@@ -26,7 +34,7 @@
     </div>
   </section>
 
-  <section id="mine" class="card" style="margin-bottom:1rem">
+  <section class="card" style="margin-bottom:1rem">
     <h3>Il mio turno</h3>
     <div id="myShift" style="color:#666">— nessun turno —</div>
   </section>
@@ -57,22 +65,26 @@ let employees=[]; let day = new Date();
 
 async function loadEmployees(){
   const res = await fetch(API.employees, {headers:{...authHeader()}});
-  employees = await res.json();
-  empSel.innerHTML = employees.filter(e=>e.is_active).map(e=>`<option value="${e.id}">${e.name}${e.role?(' ('+e.role+')'):''}</option>`).join('');
+  const data = await res.json();
+  if (data.error) { alert(data.error); return; }
+  employees = data.filter(e=>e.is_active);
+  empSel.innerHTML = employees.map(e=>`<option value="${e.id}">${e.name}${e.role?(' ('+e.role+')'):''}</option>`).join('');
 }
 
 async function loadDay(){
   const from = toISO(day);
   const res = await fetch(`${API.shifts}?from=${from}&to=${from}`, {headers:{...authHeader()}});
   const all = await res.json();
-  const me = all.filter(s => String(s.employee_id) === String(empSel.value));
-  myDiv.innerHTML = me.length
-    ? me.map(s=>`<div><strong>${hhmm(s.start_time)}–${hhmm(s.end_time)}</strong> ${s.break_minutes?`• pausa ${s.break_minutes}’`:''} ${s.notes?`<small>• ${s.notes}</small>`:''}</div>`).join('')
+  if (all.error) { alert(all.error); return; }
+
+  const mine = all.filter(s => String(s.employee_id) === String(empSel.value));
+  myDiv.innerHTML = mine.length
+    ? mine.map(s=>`<div class="pill"><strong>${hhmm(s.start_time)}–${hhmm(s.end_time)}</strong> ${s.break_minutes?`• pausa ${s.break_minutes}’`:''} ${s.notes?`<small>• ${s.notes}</small>`:''}</div>`).join('')
     : '— nessun turno —';
 
   const mates = all.filter(s => String(s.employee_id) !== String(empSel.value));
   matesDiv.innerHTML = mates.length
-    ? mates.map(s=>`<div><strong>${s.employees?.name||'—'}</strong> <small>${hhmm(s.start_time)}–${hhmm(s.end_time)}</small>${s.employees?.role?` <span class="badge">${s.employees.role}</span>`:''}</div>`).join('')
+    ? mates.map(s=>`<div class="pill"><strong>${s.employees?.name||'—'}</strong> <small>${hhmm(s.start_time)}–${hhmm(s.end_time)}</small>${s.employees?.role?` <span class="badge">${s.employees.role}</span>`:''}</div>`).join('')
     : '— nessun turno —';
 }
 
