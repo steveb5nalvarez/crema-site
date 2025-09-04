@@ -17,4 +17,44 @@
 <header class="nav">
   <div class="nav-inner container">
     <a href="/" class="brand">
-      <img src="https://gelatocrema.com/cdn/shop/files/logo_color.svg?v=1693061670&width=100" alt="CREMA" style="height:40px
+      <img src="https://gelatocrema.com/cdn/shop/files/logo_color.svg?v=1693061670&width=100" alt="CREMA" style="height:40px;width:auto">
+    </a>
+  </div>
+</header>
+
+<main class="container admin-main">
+  <h1 class="cormorant">Accedi</h1>
+  <section class="card login-card">
+    <div class="row">
+      <input id="username" placeholder="Username" autocomplete="username">
+      <input id="password" type="password" placeholder="Password" autocomplete="current-password">
+      <button class="btn primary" onclick="doLogin()">Entra</button>
+      <div id="msg" style="color:#b00020; min-height:1.2em;"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+async function doLogin(){
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value.trim();
+  const msg = document.getElementById('msg');
+  msg.textContent = '';
+
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (data.error) { msg.textContent = data.error; return; }
+    localStorage.setItem('token', data.token);
+    location.href = '/admin.html';
+  } catch {
+    msg.textContent = 'Errore di rete';
+  }
+}
+</script>
+</body>
+</html>
