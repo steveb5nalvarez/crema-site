@@ -115,3 +115,61 @@ label{ font-size:12px; color:#7b6a54; }
   padding: var(--spacing-30) 0;
   font-style: italic;
 }
+/* ===== Admin layout fix ===== */
+body.admin {
+  background: var(--background-1);      /* giallo crema */
+  min-height: 100dvh;
+}
+
+/* Contenitore principale in admin */
+.admin-main, body.admin .container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 var(--gutter-desk);
+}
+
+/* Card standard: box bianco centrato */
+.card {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.05);
+}
+
+/* Griglia elementi (prodotti, ecc.) */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+/* Righe/form admin: tutto in linea e dentro la card */
+.admin .form-row,
+.admin .toolbar,
+.admin .actions,
+.card .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Bottoni di azione: niente posizionamenti strani */
+.admin .actions,
+.card .actions {
+  justify-content: flex-end;
+  margin-left: auto;
+  position: static !important;   /* se qualche stile precedente li metteva absolute/fixed */
+  z-index: 1;
+}
+
+/* Per evitare “uscite” laterali */
+* { box-sizing: border-box; }
+img { max-width: 100%; height: auto; display: block; }
+
+/* Tabelline admin (dipendenti/turni/prodotti) */
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { padding: 8px; border-bottom: 1px solid rgba(0,0,0,.08); }
+.table th { text-align: left; color: #666; font-weight: 600; }
+
