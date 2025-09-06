@@ -8,10 +8,25 @@
   <link rel="icon" type="image/svg+xml" href="https://gelatocrema.com/cdn/shop/files/logo_color.svg?v=1693061670&width=100">
   <link rel="alternate icon" href="/favicon.ico">
   <style>
-    .login-card { max-width: 420px; margin: 40px auto; }
-    .login-card input { width: 100%; padding: 12px 14px; border:1px solid rgba(0,0,0,.12); border-radius:10px; }
-    .login-card .row { display:flex; gap:10px; flex-direction:column; }
-    .muted { color:#667085; font-size:.9rem; }
+    :root{
+      --ink:#121826; --muted:#667085; --border:rgba(0,0,0,.12);
+      --err:#b00020; --ok:#0f9d58;
+    }
+    body.admin { background: var(--background-1, #fffce3); }
+    .login-card { max-width: 460px; margin: 56px auto; padding: 20px; }
+    .login-card .row { display:flex; gap:14px; flex-direction:column; }
+    .login-card label { font-weight:600; color:#374151; }
+    .input { width:100%; padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:#fff; }
+    .muted { color:var(--muted); font-size:.9rem; }
+    .field { display:flex; flex-direction:column; gap:6px; }
+    .pw-wrap { position:relative; }
+    .pw-toggle {
+      position:absolute; right:8px; top:50%; transform:translateY(-50%);
+      background:transparent; border:0; cursor:pointer; padding:6px 8px; color:#475569;
+    }
+    #msg { min-height:1.25em; color:var(--err); }
+    .btn.primary[disabled]{ opacity:.7; cursor:not-allowed; }
+    .hint { font-size:.85rem; color:#6b7280; }
   </style>
 </head>
 <body class="admin">
@@ -24,33 +39,58 @@
 </header>
 
 <main class="container admin-main">
-  <h1 class="cormorant">Accedi</h1>
+  <h1 class="cormorant" style="margin:14px 0 8px">Accedi</h1>
   <section class="card login-card">
-    <div class="row">
-      <input id="email" type="email" placeholder="Email" autocomplete="email" />
-      <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
-      <button class="btn primary" id="btnLogin">Entra</button>
-      <div id="msg" style="color:#b00020; min-height:1.2em;"></div>
-      <div class="muted">Se non hai un account, il <strong>Store Manager</strong> può crearne uno per te.</div>
-    </div>
+    <form id="login-form" class="row" novalidate>
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" class="input" type="email" placeholder="nome@crema.it" autocomplete="email" required />
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <div class="pw-wrap">
+          <input id="password" class="input" type="password" placeholder="••••••••" autocomplete="current-password" required />
+          <button type="button" id="pwToggle" class="pw-toggle" aria-label="Mostra/Nascondi password">👁️</button>
+        </div>
+      </div>
+
+      <button class="btn primary" id="btnLogin" type="submit">Entra</button>
+      <div id="msg" role="alert"></div>
+      <p class="muted">Se non hai un account, il <strong>Store Manager</strong> può crearne uno per te.</p>
+      <p class="hint" id="postLoginHint" style="display:none">Accesso riuscito, reindirizzamento…</p>
+    </form>
   </section>
 </main>
 
 <script type="module">
   import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-  // Tu proyecto Supabase (Anon Key en el front)
+  // Supabase client
   const supabase = createClient(
     "https://tcfmeggqhxcnihkmnkqs.supabase.co",
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjZm1lZ2dxaHhjbmloa21ua3FzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxOTAzMjUsImV4cCI6MjA3Mjc2NjMyNX0.VYkrvIVWti57W9UOnQcCvywmonWGyrtIT4KAzszbiFs"
   );
 
-  const emailEl = document.getElementById('email');
-  const passEl  = document.getElementById('password');
-  const btn     = document.getElementById('btnLogin');
-  const msgEl   = document.getElementById('msg');
+  const form   = document.getElementById('login-form');
+  const email  = document.getElementById('email');
+  const pass   = document.getElementById('password');
+  const btn    = document.getElementById('btnLogin');
+  const msg    = document.getElementById('msg');
+  const hint   = document.getElementById('postLoginHint');
+  const pwToggle = document.getElementById('pwToggle');
 
-  // Redirección según rol en profiles
+  // Prefill ultimo email usado
+  const lastEmail = localStorage.getItem('crema:lastEmail');
+  if (lastEmail) email.value = lastEmail;
+
+  pwToggle.addEventListener('click', () => {
+    const isPw = pass.type === 'password';
+    pass.type = isPw ? 'text' : 'password';
+    pwToggle.textContent = isPw ? '🙈' : '👁️';
+  });
+
+  // Redirección por rol
   async function redirectByRole(){
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -62,14 +102,17 @@
       .single();
 
     if (error || !prof) {
-      msgEl.textContent = "Profilo non trovato. Contatta il manager.";
+      msg.textContent = "Profilo non trovato. Contatta il manager.";
+      btn.disabled = false;
+      btn.textContent = 'Entra';
       return;
     }
 
+    hint.style.display = 'block';
     if (prof.role === 'manager') {
-      location.href = "/admin.html";      // o "/admin-shifts.html"
+      location.href = "/admin.html";      // oppure /admin-shifts.html
     } else {
-      location.href = "/employee.html";   // area dipendente
+      location.href = "/employee.html";
     }
   }
 
@@ -78,20 +121,43 @@
     if (session?.user) redirectByRole();
   });
 
-  // Login
-  btn.addEventListener('click', async () => {
-    msgEl.textContent = '';
-    const email = emailEl.value.trim();
-    const password = passEl.value;
-    if (!email || !password) { msgEl.textContent = "Inserisci email e password"; return; }
+  // Submit (click o Enter)
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    msg.textContent = '';
+    hint.style.display = 'none';
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) { msgEl.textContent = error.message; return; }
+    const emailVal = email.value.trim();
+    const passVal  = pass.value;
 
-    await redirectByRole();
+    if (!emailVal || !passVal) {
+      msg.textContent = "Inserisci email e password";
+      return;
+    }
+
+    btn.disabled = true;
+    const oldLabel = btn.textContent;
+    btn.textContent = 'Caricamento…';
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email: emailVal, password: passVal });
+      if (error) {
+        msg.textContent = (error.message || 'Credenziali non valide');
+        btn.disabled = false;
+        btn.textContent = oldLabel;
+        return;
+      }
+      localStorage.setItem('crema:lastEmail', emailVal);
+      await redirectByRole();
+    } catch (err) {
+      console.error(err);
+      msg.textContent = 'Errore di rete';
+      btn.disabled = false;
+      btn.textContent = oldLabel;
+    }
   });
 
-  // logout helper (por si lo reutilizas desde el header)
+  // logout helper (riutilizzabile)
   window.logout = async function(){
     await supabase.auth.signOut();
     location.href = "/login.html";
