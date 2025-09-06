@@ -3,12 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>CREMA – Turni settimanali & calcolo paga</title>
-
-  <!-- Tu hoja de estilos global -->
-  <link rel="stylesheet" href="/styles.css"/>
-  <link rel="icon" type="image/svg+xml" href="https://gelatocrema.com/cdn/shop/files/logo_color.svg?v=1693061670&width=100">
-  <link rel="alternate icon" href="/favicon.ico">
+  <title>CREMA • Turni settimanali (manager)</title>
 
   <style>
     :root{
@@ -23,10 +18,14 @@
       --accent:#fdecc8;
       --border:#e5e7eb;
     }
+    *{box-sizing:border-box}
     body{
-      background: radial-gradient(1200px 800px at 95% -10%, #c7ddff, transparent 60%) , var(--bg);
+      margin:0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", "Helvetica Neue", Arial;
+      color:var(--ink);
+      background: var(--bg);
     }
-    .container{max-width:1180px;margin:0 auto;padding:0 16px}
+    .wrap{max-width:1180px;margin:32px auto;padding:0 16px}
     .card{
       background:var(--card);
       border-radius:28px;
@@ -35,17 +34,16 @@
       position:relative;
       overflow:hidden;
     }
-    .pill{position:absolute; top:18px; right:24px; height:8px; width:78px; border:2px solid #cad5f6; border-radius:999px}
-    h1{margin:18px 0 6px; font-size: clamp(22px, 3.2vw, 36px);}
+    h1{margin:8px 0 4px; font-size: clamp(22px, 3.2vw, 36px);}
     .subtitle{color:var(--muted); font-size:14px; max-width:70ch}
-    .toolbar{display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin:14px 0 6px}
+
+    .toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:14px 0 6px}
     .btn{background:#111827;color:#fff;border:0;border-radius:999px;padding:10px 14px;font-weight:600;cursor:pointer}
     .btn.secondary{background:var(--primary)}
-    input[type="date"], select {
-      padding:8px 10px; border:1px solid rgba(0,0,0,.12); border-radius:8px; background:white;
-    }
+    .switch{display:inline-flex;align-items:center;gap:8px}
+    .hint{color:var(--muted);font-size:12px;margin-left:auto}
 
-    .table-wrap{margin-top:14px; border-radius:16px; overflow:auto; border:1px solid var(--border)}
+    .table-wrap{margin-top:18px; border-radius:16px; overflow:auto; border:1px solid var(--border)}
     table{border-collapse:separate; border-spacing:0; width:100%; min-width:980px}
     thead th{position:sticky; top:0; z-index:2; background:var(--primary-600); color:white; font-weight:600; font-size:14px; padding:14px 12px; text-align:left}
     thead th:first-child{background:var(--navy)}
@@ -53,232 +51,202 @@
     tbody tr:last-child td{border-bottom:none}
     tbody td.off{background:var(--accent)}
     .right{text-align:right}
-    .emp{display:flex; align-items:center; gap:10px}
-    .avatar{--s:32px;width:var(--s);height:var(--s);border-radius:999px;background:linear-gradient(135deg,#dbeafe,#93c5fd);display:grid;place-items:center;font-weight:700;color:#0b1324}
+
+    .emp{display:flex; align-items:center; gap:12px}
+    .avatar{--s:34px; width:var(--s); height:var(--s); border-radius:999px; background:linear-gradient(135deg,#ffd3a8,#ee7523); display:grid; place-items:center; font-weight:700; color:#0b1324}
     .emp .name{font-weight:700}
-    .emp small{display:block;color:var(--muted);font-size:12px}
-    td[contenteditable="true"]{cursor:text; outline:none}
-    td[contenteditable="true"]:focus{box-shadow:inset 0 0 0 2px #bfdbfe; border-radius:8px}
+    .emp small{display:block; color:var(--muted); font-size:12px; margin-top:2px}
+
+    td[contenteditable="true"]{outline:none}
+    td.edited{box-shadow:inset 0 0 0 2px #f59e0b;border-radius:6px}
   </style>
 </head>
 <body>
-<header class="nav">
-  <div class="nav-inner container">
-    <a href="/" class="brand">
-      <img src="https://gelatocrema.com/cdn/shop/files/logo_color.svg?v=1693061670&width=100" alt="CREMA" style="height:40px;width:auto">
-    </a>
+  <div class="wrap">
+    <div class="card">
+      <h1>Programmazione turni settimanale</h1>
+      <p class="subtitle">Il manager può modificare giorno/ora o impostare <b>OFF</b>. La colonna finale mostra il <b>totale ore</b> settimanali. Sotto vedi i colleghi di turno per un giorno.</p>
+
+      <div class="toolbar">
+        <label class="switch"><input type="checkbox" id="managerMode"> Modalità manager</label>
+        <input type="date" id="weekStart"/>
+        <button class="btn" id="prevW">◀ Settimana prec.</button>
+        <button class="btn secondary" id="thisW">Questa settimana</button>
+        <button class="btn" id="nextW">Settimana succ. ▶</button>
+        <button class="btn" id="saveBtn" disabled>💾 Salva modifiche</button>
+        <span class="hint">Formato celle: <b>HH:MM-HH:MM</b> o <b>OFF</b>. Doppio clic per alternare OFF.</span>
+      </div>
+
+      <div class="table-wrap">
+        <table id="schedule">
+          <thead>
+            <tr>
+              <th style="min-width:220px">Dipendente</th>
+              <th>Lun</th><th>Mar</th><th>Mer</th><th>Gio</th><th>Ven</th><th>Sab</th><th>Dom</th>
+              <th class="right">Totale ore</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="card" style="margin-top:20px">
+        <h3>Colleghi di turno</h3>
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px">
+          <label for="matesDay">Giorno:</label>
+          <select id="matesDay">
+            <option value="0">Lunedì</option>
+            <option value="1">Martedì</option>
+            <option value="2">Mercoledì</option>
+            <option value="3">Giovedì</option>
+            <option value="4">Venerdì</option>
+            <option value="5">Sabato</option>
+            <option value="6">Domenica</option>
+          </select>
+        </div>
+        <div><strong>Banco</strong>: <span id="mates-banco">—</span></div>
+        <div><strong>Laboratorio</strong>: <span id="mates-lab">—</span></div>
+      </div>
+    </div>
   </div>
-</header>
-
-<main class="container">
-  <h1 class="cormorant">I miei turni</h1>
-
-  <!-- CONTROLS -->
-  <section class="card" style="margin-bottom:1rem">
-    <div class="pill" aria-hidden="true"></div>
-    <p class="subtitle">Vista settimanale. Seleziona dipendente e settimana per vedere ore totali e paga stimata.</p>
-    <div class="toolbar">
-      <select id="emp"></select>
-      <input type="date" id="day"/>
-      <button class="btn" id="prevW">◀ Settimana prec.</button>
-      <button class="btn secondary" id="thisW">Questa settimana</button>
-      <button class="btn" id="nextW">Settimana succ. ▶</button>
-      <span style="margin-left:auto;color:#667085;font-size:12px">Suggerimento: puoi modificare la <b>Tariffa</b> per ricalcolare la paga.</span>
-    </div>
-  </section>
-
-  <!-- WEEKLY TABLE -->
-  <section class="card">
-    <h3 style="margin:0 0 6px">Weekly shift schedule to calculate employee pay</h3>
-    <div class="table-wrap">
-      <table id="schedule">
-        <thead>
-          <tr>
-            <th style="min-width:220px">Employee name</th>
-            <th>Mon</th>
-            <th>Tue</th>
-            <th>Wed</th>
-            <th>Thu</th>
-            <th>Fri</th>
-            <th>Sat</th>
-            <th>Sun</th>
-            <th class="right">Rate/hour</th>
-            <th class="right"># Hrs</th>
-            <th class="right">Pay</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </section>
-</main>
 
 <script>
-/** ---------- API & HELPERS ---------- **/
-const API = { employees:'/api/employees', shifts:'/api/shifts' };
-function authHeader(){
-  const t = localStorage.getItem('token');
-  return t ? { 'Authorization': 'Bearer ' + t } : {};
-}
-const empSel = document.getElementById('emp');
-const dayInp = document.getElementById('day');
-const tbody = document.querySelector('#schedule tbody');
+  // ===== SEED (sostituire con dati da DB) =====
+  const seedRows = [
+    { id:1, name:"Steven A.", role:"Banco",       days:["OFF","15:15-23:45","15:15-23:45","15:15-23:45","15:15-23:45","11:00-19:30","11:00-19:30"] },
+    { id:2, name:"Angela G.", role:"Banco",       days:["15:15-23:45","15:15-23:45","15:15-23:45","OFF","15:15-23:45","15:15-23:45","15:15-23:45"] },
+    { id:3, name:"Kevin L.",  role:"Laboratorio", days:["08:30-15:30","08:30-15:30","OFF","08:30-15:30","08:30-15:30","08:30-15:30","08:30-15:30"] },
+    { id:4, name:"Lukshan P.",role:"Laboratorio", days:["16:15-23:45","OFF","10:30-17:30","16:15-23:45","16:15-23:45","16:15-23:45","16:15-23:45"] }
+  ];
 
-function toISO(d){ return d.toISOString().slice(0,10); }
-function startOfWeek(d){ const x = new Date(d); const day = (x.getDay()+6)%7; x.setDate(x.getDate()-day); x.setHours(0,0,0,0); return x; } // Monday
-function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
-function rangeDays(from){ return Array.from({length:7}, (_,i)=> addDays(from,i)); }
-function hhmm(t){ return (t||'').slice(0,5); }
-function initials(name){ return (name||'').split(/\s+/).map(s=>s[0]).join('').slice(0,2).toUpperCase(); }
-function fmtMoney(n){ return new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(+n||0); }
+  // Sugerido para el backend: endpoint bulk upsert
+  const API = { shifts:'/api/shifts/bulk' };
+  function authHeader(){ const t=localStorage.getItem('token'); return t?{Authorization:'Bearer '+t}:{ }; }
 
-/** Parse ore da un turno (start_time, end_time, break_minutes) */
-function hoursFromShift(s){
-  const a = s.start_time ? Number(s.start_time.slice(0,2)) + Number(s.start_time.slice(3,5))/60 : 0;
-  const b = s.end_time   ? Number(s.end_time.slice(0,2))   + Number(s.end_time.slice(3,5))/60   : 0;
-  let h = b - a; if (h < 0) h += 24;
-  const br = Number(s.break_minutes||0)/60;
-  return Math.max(0, h - br);
-}
+  const tbody = document.querySelector('#schedule tbody');
+  const managerMode = document.getElementById('managerMode');
+  const saveBtn = document.getElementById('saveBtn');
+  const weekStartInp = document.getElementById('weekStart');
+  const matesDaySel = document.getElementById('matesDay');
 
-/** ---------- STATE ---------- **/
-let employees = [];
-let anchorDay = new Date(); // qualsiasi giorno della settimana visualizzata
+  function toISO(d){ return d.toISOString().slice(0,10); }
+  function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+  function startOfWeek(d){ const x=new Date(d); const w=(x.getDay()+6)%7; x.setDate(x.getDate()-w); x.setHours(0,0,0,0); return x; }
+  function range7(from){ return Array.from({length:7},(_,i)=>addDays(from,i)); }
+  function parseHours(span){
+    if(!span||/off/i.test(span)) return 0;
+    const m=span.match(/(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})/);
+    if(!m) return 0;
+    const s=+m[1]*60+ +m[2]; let e=+m[3]*60+ +m[4];
+    let diff=e-s; if(diff<0) diff+=1440;
+    return diff/60;
+  }
+  function initials(name){ return (name||'').split(/\s+/).map(s=>s[0]).join('').slice(0,2).toUpperCase(); }
 
-/** ---------- UI SEED ---------- **/
-async function loadEmployees(){
-  const res = await fetch(API.employees, {headers:{...authHeader()}});
-  const data = await res.json();
-  if (data.error) { alert(data.error); return; }
-  employees = (data||[]).filter(e=>e.is_active!==false);
-  empSel.innerHTML = employees.map(e=>`<option value="${e.id}">${e.name}${e.role?(' ('+e.role+')'):''}</option>`).join('');
-}
+  let weekStart = startOfWeek(new Date());
+  weekStartInp.value = toISO(weekStart);
 
-/** Fetch turni su 7 giorni, raggruppati per employee_id+giorno */
-async function loadWeek(){
-  const from = startOfWeek(anchorDay);
-  const to = addDays(from, 6);
-  dayInp.value = toISO(from);
+  const edits = new Map(); // `${empId}-${idx}` -> "OFF" | "HH:MM-HH:MM"
 
-  // Selezione opzionale dipendente (se vuoi filtrarne uno specifico)
-  const selectedId = empSel.value || '';
-
-  const res = await fetch(`${API.shifts}?from=${toISO(from)}&to=${toISO(to)}`, {headers:{...authHeader()}});
-  const list = await res.json();
-  if (list.error) { alert(list.error); return; }
-
-  // build mappa: emp -> giorno ISO -> array di turni
-  const map = new Map();
-  for (const emp of employees) map.set(String(emp.id), {});
-  for (const s of (list||[])) {
-    const empId = String(s.employee_id);
-    if (!map.has(empId)) continue;
-    const dayKey = (s.date || s.start_date || s.start_time?.slice(0,10) || s.end_time?.slice(0,10) || s.day || '').slice(0,10) || s.shift_date || '';
-    // Se l'API non manda un campo data, assumiamo che sia nel range e usiamo la query 'from+offset'
-    const d = dayKey || ''; // se viene vacío, lo caeremos por la fecha de query al pintar
-    const bucket = map.get(empId);
-    (bucket[d] ||= []).push(s);
+  function makeEmpCell(name, role){
+    return `<div class="emp"><div class="avatar">${initials(name)}</div><div><div class="name">${name}</div><small>${role||''}</small></div></div>`;
   }
 
-  renderTable(from, map, selectedId);
-}
+  function render(){
+    tbody.innerHTML='';
+    seedRows.forEach(emp=>{
+      let tot=0; const tr=document.createElement('tr');
+      tr.innerHTML = `<td>${makeEmpCell(emp.name,emp.role)}</td>`;
 
-/** ---------- RENDER ---------- **/
-function renderTable(weekStart, map, selectedId){
-  tbody.innerHTML = '';
-  const days = rangeDays(weekStart);
-  const dayKeys = days.map(d=> toISO(d));
-  const weekLabel = {0:'Mon',1:'Tue',2:'Wed',3:'Thu',4:'Fri',5:'Sat',6:'Sun'};
+      emp.days.forEach((orig,idx)=>{
+        const key=`${emp.id}-${idx}`; const value=edits.has(key)?edits.get(key):orig;
+        const td=document.createElement('td');
+        td.dataset.empId=emp.id; td.dataset.dayIdx=idx; td.setAttribute('data-day-idx',idx);
+        td.textContent=value;
+        if(/off/i.test(value)) td.classList.add('off');
+        if(managerMode.checked){ td.contentEditable='true'; } else { td.removeAttribute('contenteditable'); td.classList.remove('edited'); }
+        td.addEventListener('dblclick',()=>{
+          const current = td.textContent.trim();
+          const v = /off/i.test(current) ? '09:00-18:00' : 'OFF';
+          td.textContent=v; td.classList.toggle('off',/off/i.test(v)); markEdited(td);
+        });
+        td.addEventListener('input',()=> markEdited(td));
+        tr.appendChild(td);
+        tot += parseHours(value);
+      });
 
-  for (const emp of employees) {
-    if (selectedId && String(emp.id)!==String(selectedId)) continue;
+      const tdTot=document.createElement('td');
+      tdTot.className='right';
+      tdTot.textContent = Math.round(tot).toString();
+      tr.appendChild(tdTot);
+      tbody.appendChild(tr);
+    });
+  }
 
-    const tr = document.createElement('tr');
-    // Columna empleado
-    tr.innerHTML = `
-      <td>
-        <div class="emp">
-          <div class="avatar">${initials(emp.name)}</div>
-          <div><div class="name">${emp.name||'—'}</div><small>${emp.role||''}</small></div>
-        </div>
-      </td>
-    `;
+  function markEdited(td){
+    if(!managerMode.checked) return;
+    const empId=td.dataset.empId; const idx=td.dataset.dayIdx; const val=td.textContent.trim();
+    edits.set(`${empId}-${idx}`, val);
+    td.classList.add('edited'); saveBtn.disabled=false; recalcRow(td.closest('tr'));
+  }
 
-    // 7 días
-    let totalHrs = 0;
-    const bucket = map.get(String(emp.id)) || {};
-    dayKeys.forEach((k, idx) => {
-      const shifts = bucket[k] || [];
-      let cell = '';
-      if (shifts.length) {
-        let sum = 0;
-        cell = shifts.map(s => {
-          const h = hoursFromShift(s); sum += h;
-          return `${hhmm(s.start_time)}–${hhmm(s.end_time)}${s.break_minutes?` (−${s.break_minutes}′)`:''}`;
-        }).join('<br>');
-        totalHrs += sum;
-      } else {
-        cell = 'OFF';
+  function recalcRow(tr){
+    const dayTds=[...tr.querySelectorAll('td[data-day-idx]')];
+    let tot=0; dayTds.forEach(td=>{ tot+=parseHours(td.textContent.trim());});
+    tr.querySelector('.right').textContent=Math.round(tot).toString();
+  }
+
+  async function saveChanges(){
+    if(edits.size===0) return;
+    const payload=[];
+    edits.forEach((val,key)=>{
+      const [empId,idx]=key.split('-');
+      const date = toISO(addDays(weekStart, Number(idx)));
+      if(/off/i.test(val)||val===''){ payload.push({ employee_id:Number(empId), date, off:true }); }
+      else{
+        const m=val.match(/(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})/);
+        if(!m) return;
+        payload.push({ employee_id:Number(empId), date, start_time:`${m[1]}:${m[2]}`, end_time:`${m[3]}:${m[4]}` });
       }
-      const td = document.createElement('td');
-      td.innerHTML = cell;
-      if (cell==='OFF') td.classList.add('off');
-      tr.appendChild(td);
     });
 
-    // Rate (editable), Horas y Pago (auto)
-    const rate = Number(emp.rate_hour || emp.rate || 10);
-    const tdRate = document.createElement('td');
-    tdRate.className = 'right';
-    tdRate.contentEditable = 'true';
-    tdRate.dataset.rate = '1';
-    tdRate.textContent = rate.toFixed(2);
-
-    const tdHrs = document.createElement('td');
-    tdHrs.className = 'right';
-    tdHrs.dataset.hours = '1';
-    tdHrs.textContent = Math.round(totalHrs).toString();
-
-    const tdPay = document.createElement('td');
-    tdPay.className = 'right';
-    tdPay.dataset.pay = '1';
-    tdPay.textContent = fmtMoney(totalHrs * rate);
-
-    tr.appendChild(tdRate);
-    tr.appendChild(tdHrs);
-    tr.appendChild(tdPay);
-
-    tbody.appendChild(tr);
+    try{
+      // Implementare sul backend: POST /api/shifts/bulk  -> {items:[...], week_start:"YYYY-MM-DD"}
+      const res = await fetch(API.shifts, {
+        method:'POST',
+        headers:{'Content-Type':'application/json', ...authHeader()},
+        body: JSON.stringify({ items: payload, week_start: toISO(weekStart) })
+      });
+      if(!res.ok){ console.warn('Save error', await res.text()); alert('Errore nel salvataggio.'); return; }
+      edits.clear(); saveBtn.disabled=true; alert('Modifiche salvate!');
+    }catch(err){ console.error(err); alert('Errore di rete durante il salvataggio.'); }
   }
-}
 
-/** ---------- EVENTS ---------- **/
-document.getElementById('prevW').addEventListener('click', ()=>{ anchorDay = addDays(startOfWeek(anchorDay), -7); loadWeek(); });
-document.getElementById('thisW').addEventListener('click', ()=>{ anchorDay = new Date(); loadWeek(); });
-document.getElementById('nextW').addEventListener('click', ()=>{ anchorDay = addDays(startOfWeek(anchorDay), 7); loadWeek(); });
+  function renderMates(){
+    const idx = Number(matesDaySel.value)||0;
+    const banco=[]; const lab=[];
+    seedRows.forEach(r=>{
+      const turno=(edits.get(`${r.id}-${idx}`) ?? r.days[idx])||'';
+      if(!/off/i.test(turno)&&turno){
+        const line = `${r.name} ${turno}`;
+        if(/laboratorio/i.test(r.role) || /^kevin\b/i.test(r.name) || /^lukshan\b/i.test(r.name)) lab.push(line);
+        else banco.push(line);
+      }
+    });
+    document.getElementById('mates-banco').textContent=banco.join(', ')||'— nessun turno —';
+    document.getElementById('mates-lab').textContent=lab.join(', ')||'— nessun turno —';
+  }
 
-empSel.addEventListener('change', loadWeek);
-dayInp.addEventListener('change', ()=>{ anchorDay = new Date(dayInp.value); loadWeek(); });
+  document.getElementById('prevW').addEventListener('click',()=>{ weekStart = addDays(weekStart,-7); weekStartInp.value=toISO(weekStart); render(); renderMates(); });
+  document.getElementById('thisW').addEventListener('click',()=>{ weekStart = startOfWeek(new Date()); weekStartInp.value=toISO(weekStart); render(); renderMates(); });
+  document.getElementById('nextW').addEventListener('click',()=>{ weekStart = addDays(weekStart, 7); weekStartInp.value=toISO(weekStart); render(); renderMates(); });
+  weekStartInp.addEventListener('change',()=>{ weekStart = startOfWeek(new Date(weekStartInp.value)); render(); renderMates(); });
+  managerMode.addEventListener('change',()=>{ render(); });
+  document.getElementById('saveBtn').addEventListener('click', saveChanges);
+  matesDaySel.addEventListener('change', renderMates);
 
-// Recalcular pay al editar tarifa
-document.addEventListener('input', (e)=>{
-  const td = e.target.closest('td[data-rate]');
-  if (!td) return;
-  const tr = td.parentElement;
-  const rate = parseFloat(td.textContent.replace(/[^0-9.\\-]/g,'')) || 0;
-  const hours = parseFloat(tr.querySelector('td[data-hours]').textContent) || 0;
-  tr.querySelector('td[data-pay]').textContent = fmtMoney(rate * hours);
-});
-
-/** ---------- INIT ---------- **/
-async function init(){
-  const t = localStorage.getItem('token');
-  if(!t){ alert('Accedi come admin per usare questa pagina'); location.href='/admin.html'; return; }
-  await loadEmployees();
-  anchorDay = new Date(); dayInp.value = toISO(startOfWeek(anchorDay));
-  await loadWeek();
-}
-init();
+  render();
+  renderMates();
 </script>
 </body>
 </html>
