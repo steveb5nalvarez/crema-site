@@ -7,6 +7,27 @@
   <link rel="stylesheet" href="/styles.css"/>
   <link rel="icon" type="image/svg+xml" href="https://gelatocrema.com/cdn/shop/files/logo_color.svg?v=1693061670&width=100">
   <link rel="alternate icon" href="/favicon.ico">
+  <style>
+    /* Mini fix per layout admin */
+    body.admin { background: var(--background-1, #fffce3); }
+    .admin-main .grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+    .card .actions { display:flex; gap:8px; margin-top:10px; }
+    .form-row { display:flex; flex-wrap:wrap; gap:10px; }
+
+    /* Modal base (coerente con styles.css) */
+    .modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.35); padding:16px; z-index:999; }
+    .modal.open { display:flex; }
+    .modal-content { width:100%; max-width:720px; background:#fff; border-radius:12px; overflow:hidden; }
+    .modal-header { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid rgba(0,0,0,.08); }
+    .modal-body { padding:16px; }
+    .modal-body form label { display:block; font-weight:600; font-size:.95rem; color:#444; }
+    .modal-body form input,
+    .modal-body form textarea,
+    .modal-body form select { width:100%; padding:10px 12px; border:1px solid rgba(0,0,0,.12); border-radius:8px; }
+    .modal-body form textarea { resize:vertical; }
+    .two-col { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    @media (max-width: 640px){ .two-col { grid-template-columns:1fr; } }
+  </style>
 </head>
 <body class="admin">
 <header class="nav">
@@ -24,92 +45,176 @@
 </header>
 
 <main class="container admin-main">
-  <h1 class="cormorant">Gestione Prodotti</h1>
-
-  <!-- Aggiungi prodotto -->
-  <section class="card" style="margin-bottom:1rem">
-    <h3>Aggiungi nuovo prodotto</h3>
-    <div class="form-row">
-      <input id="p-name" placeholder="Nome"/>
-      <input id="p-cat" placeholder="Categoria"/>
-      <input id="p-img" placeholder="URL immagine"/>
-      <textarea id="p-desc" placeholder="Descrizione" style="flex:1"></textarea>
-      <textarea id="p-ing" placeholder="Ingredienti" style="flex:1"></textarea>
-      <button class="btn primary" onclick="addProduct()">Aggiungi</button>
-    </div>
-  </section>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+    <h1 class="cormorant" style="margin:0">Gestione Prodotti</h1>
+    <button class="btn primary" onclick="openProductForm()">+ Nuovo</button>
+    <input id="search" placeholder="Cerca per nome o categoria..." style="margin-left:auto;max-width:320px;padding:10px 12px;border:1px solid rgba(0,0,0,.12);border-radius:8px">
+  </div>
 
   <!-- Lista prodotti -->
   <section id="plist" class="grid"></section>
 </main>
 
+<!-- Modal CREAZIONE / MODIFICA -->
+<div id="productModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <strong id="pm-title">Nuovo prodotto</strong>
+      <button class="btn" onclick="toggleProductModal(false)">Chiudi</button>
+    </div>
+    <div class="modal-body">
+      <form id="productForm" onsubmit="submitProduct(event)">
+        <input type="hidden" id="p-id">
+        <div class="two-col">
+          <div>
+            <label for="p-name">Nome</label>
+            <input id="p-name" required placeholder="Es. Stracciatella">
+          </div>
+          <div>
+            <label for="p-cat">Categoria</label>
+            <input id="p-cat" placeholder="Es. Gelato, Sorbetto">
+          </div>
+          <div style="grid-column:1 / -1">
+            <label for="p-desc">Descrizione</label>
+            <textarea id="p-desc" rows="3" placeholder="Testo di presentazione"></textarea>
+          </div>
+          <div style="grid-column:1 / -1">
+            <label for="p-ing">Ingredienti</label>
+            <textarea id="p-ing" rows="2" placeholder="Es. latte, panna, cacao..."></textarea>
+          </div>
+          <div style="grid-column:1 / -1">
+            <label for="p-img">URL immagine</label>
+            <input id="p-img" placeholder="https://...">
+          </div>
+          <div>
+            <label for="p-available">Disponibile</label>
+            <select id="p-available">
+              <option value="true">Sì</option>
+              <option value="false">No</option>
+            </select>
+          </div>
+          <div>
+            <label for="p-tags">Tag (separati da virgola)</label>
+            <input id="p-tags" placeholder="vegano, senza glutine">
+          </div>
+          <div>
+            <label for="p-order">Ordine</label>
+            <input id="p-order" type="number" value="0">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+          <button type="button" class="btn" onclick="toggleProductModal(false)">Annulla</button>
+          <button class="btn primary" type="submit">Salva</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <script>
-const API = '/api/products';
+const API = '/api/products'; // usa il tuo endpoint attuale
+
 function authHeader(){
   const t = localStorage.getItem('token');
   return t ? { 'Authorization': 'Bearer ' + t } : {};
 }
 function logout(){ localStorage.removeItem('token'); location.href='/admin.html'; }
 
-async function addProduct(){
-  const payload = {
-    name: document.getElementById('p-name').value.trim(),
-    category: document.getElementById('p-cat').value.trim(),
-    image_url: document.getElementById('p-img').value.trim(),
-    description: document.getElementById('p-desc').value.trim(),
-    ingredients: document.getElementById('p-ing').value.trim()
-  };
-  if(!payload.name) return alert('Nome richiesto');
-  const res = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json', ...authHeader()}, body: JSON.stringify(payload)});
-  const data = await res.json();
-  if(data.error) return alert(data.error);
-  document.getElementById('p-name').value=''; document.getElementById('p-cat').value=''; document.getElementById('p-img').value='';
-  document.getElementById('p-desc').value=''; document.getElementById('p-ing').value='';
-  loadProducts();
+function toggleProductModal(show){
+  document.getElementById('productModal').classList[show?'add':'remove']('open');
 }
 
-async function loadProducts(){
-  const res = await fetch(API, {headers:{...authHeader()}});
-  const data = await res.json();
-  const list = document.getElementById('plist');
-  list.innerHTML = '';
-  data.forEach(p=>{
-    const div = document.createElement('div');
-    div.className = 'card';
-    div.innerHTML = `
-      <img src="${p.image_url||'https://images.unsplash.com/photo-1551024709-8f23befc6cf7?w=400'}" style="width:100%;height:160px;object-fit:cover;border-radius:8px"/>
-      <h3 style="margin:.5rem 0">${p.name}</h3>
-      <small class="badge">${p.category||'—'}</small>
-      <p style="margin:.5rem 0;color:#555">${p.description||''}</p>
-      <p><strong>Ingredienti:</strong> ${p.ingredients||'—'}</p>
-      <div class="actions">
-        <button class="btn" onclick="editProduct(${p.id})">Modifica</button>
-        <button class="btn" onclick="delProduct(${p.id})">Elimina</button>
-      </div>
-    `;
-    list.appendChild(div);
+function openProductForm(prod){
+  document.getElementById('pm-title').textContent = prod ? 'Modifica prodotto' : 'Nuovo prodotto';
+  const f = document.getElementById('productForm');
+  f.reset();
+  document.getElementById('p-id').value = prod?.id || '';
+  document.getElementById('p-name').value = prod?.name || '';
+  document.getElementById('p-cat').value = prod?.category || '';
+  document.getElementById('p-desc').value = prod?.description || '';
+  document.getElementById('p-ing').value = prod?.ingredients || '';
+  document.getElementById('p-img').value = prod?.image_url || '';
+  document.getElementById('p-available').value = String(prod?.is_available ?? true);
+  document.getElementById('p-tags').value = Array.isArray(prod?.tags) ? prod.tags.join(', ') : '';
+  document.getElementById('p-order').value = prod?.sort_order ?? 0;
+  toggleProductModal(true);
+}
+
+async function submitProduct(e){
+  e.preventDefault();
+  const id = document.getElementById('p-id').value.trim();
+  const body = {
+    name: document.getElementById('p-name').value.trim(),
+    category: document.getElementById('p-cat').value.trim() || null,
+    image_url: document.getElementById('p-img').value.trim() || null,
+    description: document.getElementById('p-desc').value.trim() || null,
+    ingredients: document.getElementById('p-ing').value.trim() || null,
+    is_available: document.getElementById('p-available').value === 'true',
+    tags: document.getElementById('p-tags').value
+      ? document.getElementById('p-tags').value.split(',').map(s=>s.trim()).filter(Boolean)
+      : [],
+    sort_order: Number(document.getElementById('p-order').value || 0)
+  };
+  if(!body.name){ alert('Nome richiesto'); return; }
+
+  const res = await fetch(id ? `${API}/${id}` : API, {
+    method: id ? 'PUT' : 'POST',
+    headers: { 'Content-Type':'application/json', ...authHeader() },
+    body: JSON.stringify(body)
   });
+  const data = await res.json();
+  if(data.error){ alert(data.error); return; }
+  toggleProductModal(false);
+  loadProducts();
 }
 
 async function delProduct(id){
   if(!confirm('Eliminare prodotto?')) return;
-  const res = await fetch(API+'/'+id, {method:'DELETE', headers:{...authHeader()}});
+  const res = await fetch(`${API}/${id}`, { method:'DELETE', headers:{ ...authHeader() } });
   const data = await res.json();
-  if(data.error) return alert(data.error);
+  if(data.error){ alert(data.error); return; }
   loadProducts();
 }
 
-function editProduct(id){
-  const prod = prompt('Nuovo nome prodotto (lascia vuoto per non modificare):');
-  if(prod===null) return;
-  const body = { name: prod };
-  fetch(API+'/'+id, {method:'PUT', headers:{'Content-Type':'application/json', ...authHeader()}, body: JSON.stringify(body)})
-    .then(r=>r.json()).then(()=>loadProducts());
+function productCard(p){
+  const div = document.createElement('div');
+  div.className = 'card';
+  div.innerHTML = `
+    <img src="${p.image_url || 'https://images.unsplash.com/photo-1551024709-8f23befc6cf7?w=800'}"
+         alt="" style="width:100%;height:160px;object-fit:cover;border-radius:8px"/>
+    <h3 style="margin:.5rem 0">${p.name}</h3>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <small class="badge">${p.category || '—'}</small>
+      <small>${p.is_available ? 'Disponibile' : 'Non disponibile'}</small>
+    </div>
+    <p style="margin:.5rem 0;color:#555">${p.description ? p.description : ''}</p>
+    ${p.ingredients ? `<p><strong>Ingredienti:</strong> ${p.ingredients}</p>` : ''}
+    <div class="actions">
+      <button class="btn" onclick='openProductForm(${JSON.stringify(p).replace(/"/g,"&quot;")})'>Modifica</button>
+      <button class="btn" onclick="delProduct(${p.id})">Elimina</button>
+    </div>
+  `;
+  return div;
 }
+
+async function loadProducts(){
+  const res = await fetch(API, { headers:{ ...authHeader() } });
+  const data = await res.json();
+  if (data.error) { alert(data.error); return; }
+
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const list = document.getElementById('plist');
+  list.innerHTML = '';
+  data
+    .filter(p => !q || (p.name?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q)))
+    .forEach(p => list.appendChild(productCard(p)));
+}
+
+document.getElementById('search').addEventListener('input', loadProducts);
 
 function init(){
   const t = localStorage.getItem('token');
-  if(!t){ location.href='/index.html'; return; }
+  if(!t){ location.href='/admin.html'; return; }
   loadProducts();
 }
 init();
