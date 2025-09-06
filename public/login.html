@@ -11,6 +11,7 @@
     .login-card { max-width: 420px; margin: 40px auto; }
     .login-card input { width: 100%; padding: 12px 14px; border:1px solid rgba(0,0,0,.12); border-radius:10px; }
     .login-card .row { display:flex; gap:10px; flex-direction:column; }
+    .muted { color:#667085; font-size:.9rem; }
   </style>
 </head>
 <body class="admin">
@@ -26,35 +27,75 @@
   <h1 class="cormorant">Accedi</h1>
   <section class="card login-card">
     <div class="row">
-      <input id="username" placeholder="Username" autocomplete="username">
-      <input id="password" type="password" placeholder="Password" autocomplete="current-password">
-      <button class="btn primary" onclick="doLogin()">Entra</button>
+      <input id="email" type="email" placeholder="Email" autocomplete="email" />
+      <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
+      <button class="btn primary" id="btnLogin">Entra</button>
       <div id="msg" style="color:#b00020; min-height:1.2em;"></div>
+      <div class="muted">Se non hai un account, il <strong>Store Manager</strong> può crearne uno per te.</div>
     </div>
   </section>
 </main>
 
-<script>
-async function doLogin(){
-  const username = document.getElementById('username').value.trim();
-  const password = document.getElementById('password').value.trim();
-  const msg = document.getElementById('msg');
-  msg.textContent = '';
+<script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-  try {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ username, password })
-    });
-    const data = await res.json();
-    if (data.error) { msg.textContent = data.error; return; }
-    localStorage.setItem('token', data.token);
-    location.href = '/admin.html';
-  } catch {
-    msg.textContent = 'Errore di rete';
+  // Tu proyecto Supabase (Anon Key en el front)
+  const supabase = createClient(
+    "https://tcfmeggqhxcnihkmnkqs.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjZm1lZ2dxaHhjbmloa21ua3FzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxOTAzMjUsImV4cCI6MjA3Mjc2NjMyNX0.VYkrvIVWti57W9UOnQcCvywmonWGyrtIT4KAzszbiFs"
+  );
+
+  const emailEl = document.getElementById('email');
+  const passEl  = document.getElementById('password');
+  const btn     = document.getElementById('btnLogin');
+  const msgEl   = document.getElementById('msg');
+
+  // Redirección según rol en profiles
+  async function redirectByRole(){
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: prof, error } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (error || !prof) {
+      msgEl.textContent = "Profilo non trovato. Contatta il manager.";
+      return;
+    }
+
+    if (prof.role === 'manager') {
+      location.href = "/admin.html";      // o "/admin-shifts.html"
+    } else {
+      location.href = "/employee.html";   // area dipendente
+    }
   }
-}
+
+  // Si ya hay session activa, redirige
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session?.user) redirectByRole();
+  });
+
+  // Login
+  btn.addEventListener('click', async () => {
+    msgEl.textContent = '';
+    const email = emailEl.value.trim();
+    const password = passEl.value;
+    if (!email || !password) { msgEl.textContent = "Inserisci email e password"; return; }
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) { msgEl.textContent = error.message; return; }
+
+    await redirectByRole();
+  });
+
+  // logout helper (por si lo reutilizas desde el header)
+  window.logout = async function(){
+    await supabase.auth.signOut();
+    location.href = "/login.html";
+  };
 </script>
 </body>
 </html>
