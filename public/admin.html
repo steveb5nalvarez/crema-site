@@ -10,11 +10,11 @@
   <style>
     /* Mini fix per layout admin */
     body.admin { background: var(--background-1, #fffce3); }
-    .admin-main .grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+    .admin-main .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
     .card .actions { display:flex; gap:8px; margin-top:10px; }
     .form-row { display:flex; flex-wrap:wrap; gap:10px; }
 
-    /* Modal base (coerente con styles.css) */
+    /* Modal base */
     .modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.35); padding:16px; z-index:999; }
     .modal.open { display:flex; }
     .modal-content { width:100%; max-width:720px; background:#fff; border-radius:12px; overflow:hidden; }
@@ -44,7 +44,7 @@
   </div>
 </header>
 
-<main class="container admin-main">
+<main class="container admin-main" id="app" hidden>
   <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
     <h1 class="cormorant" style="margin:0">Gestione Prodotti</h1>
     <button class="btn primary" onclick="openProductForm()">+ Nuovo</button>
@@ -63,7 +63,7 @@
       <button class="btn" onclick="toggleProductModal(false)">Chiudi</button>
     </div>
     <div class="modal-body">
-      <form id="productForm" onsubmit="submitProduct(event)">
+      <form id="productForm">
         <input type="hidden" id="p-id">
         <div class="two-col">
           <div>
@@ -104,120 +104,150 @@
         </div>
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
           <button type="button" class="btn" onclick="toggleProductModal(false)">Annulla</button>
-          <button class="btn primary" type="submit">Salva</button>
+          <button class="btn primary" id="btnSave" type="submit">Salva</button>
         </div>
       </form>
     </div>
   </div>
 </div>
 
-<script>
-const API = '/api/products'; // usa il tuo endpoint attuale
+<script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-function authHeader(){
-  const t = localStorage.getItem('token');
-  return t ? { 'Authorization': 'Bearer ' + t } : {};
-}
-function logout(){ localStorage.removeItem('token'); location.href='/admin.html'; }
+  // === Supabase client (Anon key SOLO en front) ===
+  const supabase = createClient(
+    "https://tcfmeggqhxcnihkmnkqs.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjZm1lZ2dxaHhjbmloa21ua3FzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxOTAzMjUsImV4cCI6MjA3Mjc2NjMyNX0.VYkrvIVWti57W9UOnQcCvywmonWGyrtIT4KAzszbiFs"
+  );
 
-function toggleProductModal(show){
-  document.getElementById('productModal').classList[show?'add':'remove']('open');
-}
+  // ====== GUARD: solo manager ======
+  async function ensureManager() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { location.href = "/login.html"; return false; }
+    const { data: prof, error } = await supabase.from('profiles').select('role').eq('user_id', user.id).single();
+    if (error || !prof) { location.href = "/login.html"; return false; }
+    if (prof.role !== 'manager') { location.href = "/employee.html"; return false; }
+    return true;
+  }
 
-function openProductForm(prod){
-  document.getElementById('pm-title').textContent = prod ? 'Modifica prodotto' : 'Nuovo prodotto';
-  const f = document.getElementById('productForm');
-  f.reset();
-  document.getElementById('p-id').value = prod?.id || '';
-  document.getElementById('p-name').value = prod?.name || '';
-  document.getElementById('p-cat').value = prod?.category || '';
-  document.getElementById('p-desc').value = prod?.description || '';
-  document.getElementById('p-ing').value = prod?.ingredients || '';
-  document.getElementById('p-img').value = prod?.image_url || '';
-  document.getElementById('p-available').value = String(prod?.is_available ?? true);
-  document.getElementById('p-tags').value = Array.isArray(prod?.tags) ? prod.tags.join(', ') : '';
-  document.getElementById('p-order').value = prod?.sort_order ?? 0;
-  toggleProductModal(true);
-}
-
-async function submitProduct(e){
-  e.preventDefault();
-  const id = document.getElementById('p-id').value.trim();
-  const body = {
-    name: document.getElementById('p-name').value.trim(),
-    category: document.getElementById('p-cat').value.trim() || null,
-    image_url: document.getElementById('p-img').value.trim() || null,
-    description: document.getElementById('p-desc').value.trim() || null,
-    ingredients: document.getElementById('p-ing').value.trim() || null,
-    is_available: document.getElementById('p-available').value === 'true',
-    tags: document.getElementById('p-tags').value
-      ? document.getElementById('p-tags').value.split(',').map(s=>s.trim()).filter(Boolean)
-      : [],
-    sort_order: Number(document.getElementById('p-order').value || 0)
+  // ====== LOGOUT ======
+  window.logout = async () => {
+    await supabase.auth.signOut();
+    location.href = "/login.html";
   };
-  if(!body.name){ alert('Nome richiesto'); return; }
 
-  const res = await fetch(id ? `${API}/${id}` : API, {
-    method: id ? 'PUT' : 'POST',
-    headers: { 'Content-Type':'application/json', ...authHeader() },
-    body: JSON.stringify(body)
-  });
-  const data = await res.json();
-  if(data.error){ alert(data.error); return; }
-  toggleProductModal(false);
-  loadProducts();
-}
-
-async function delProduct(id){
-  if(!confirm('Eliminare prodotto?')) return;
-  const res = await fetch(`${API}/${id}`, { method:'DELETE', headers:{ ...authHeader() } });
-  const data = await res.json();
-  if(data.error){ alert(data.error); return; }
-  loadProducts();
-}
-
-function productCard(p){
-  const div = document.createElement('div');
-  div.className = 'card';
-  div.innerHTML = `
-    <img src="${p.image_url || 'https://images.unsplash.com/photo-1551024709-8f23befc6cf7?w=800'}"
-         alt="" style="width:100%;height:160px;object-fit:cover;border-radius:8px"/>
-    <h3 style="margin:.5rem 0">${p.name}</h3>
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <small class="badge">${p.category || '—'}</small>
-      <small>${p.is_available ? 'Disponibile' : 'Non disponibile'}</small>
-    </div>
-    <p style="margin:.5rem 0;color:#555">${p.description ? p.description : ''}</p>
-    ${p.ingredients ? `<p><strong>Ingredienti:</strong> ${p.ingredients}</p>` : ''}
-    <div class="actions">
-      <button class="btn" onclick='openProductForm(${JSON.stringify(p).replace(/"/g,"&quot;")})'>Modifica</button>
-      <button class="btn" onclick="delProduct(${p.id})">Elimina</button>
-    </div>
-  `;
-  return div;
-}
-
-async function loadProducts(){
-  const res = await fetch(API, { headers:{ ...authHeader() } });
-  const data = await res.json();
-  if (data.error) { alert(data.error); return; }
-
-  const q = document.getElementById('search').value.trim().toLowerCase();
+  // ====== UI helpers ======
+  const DEFAULT_IMG = 'https://images.unsplash.com/photo-1551024709-8f23befc6cf7?w=800';
+  const qSearch = document.getElementById('search');
   const list = document.getElementById('plist');
-  list.innerHTML = '';
-  data
-    .filter(p => !q || (p.name?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q)))
-    .forEach(p => list.appendChild(productCard(p)));
-}
 
-document.getElementById('search').addEventListener('input', loadProducts);
+  function toggleProductModal(show){
+    document.getElementById('productModal').classList[show?'add':'remove']('open');
+  }
 
-function init(){
-  const t = localStorage.getItem('token');
-  if(!t){ location.href='/admin.html'; return; }
-  loadProducts();
-}
-init();
+  function openProductForm(prod){
+    document.getElementById('pm-title').textContent = prod ? 'Modifica prodotto' : 'Nuovo prodotto';
+    const f = document.getElementById('productForm');
+    f.reset();
+    document.getElementById('p-id').value = prod?.id || '';
+    document.getElementById('p-name').value = prod?.name || '';
+    document.getElementById('p-cat').value = prod?.category || '';
+    document.getElementById('p-desc').value = prod?.description || '';
+    document.getElementById('p-ing').value = prod?.ingredients || '';
+    document.getElementById('p-img').value = prod?.image_url || '';
+    document.getElementById('p-available').value = String(prod?.is_available ?? true);
+    document.getElementById('p-tags').value = Array.isArray(prod?.tags) ? prod.tags.join(', ') : '';
+    document.getElementById('p-order').value = prod?.sort_order ?? 0;
+    toggleProductModal(true);
+  }
+  window.openProductForm = openProductForm;
+
+  function productCard(p){
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `
+      <img src="${p.image_url || DEFAULT_IMG}" alt="" style="width:100%;height:160px;object-fit:cover;border-radius:8px"/>
+      <h3 style="margin:.5rem 0">${p.name}</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <small class="badge">${p.category || '—'}</small>
+        <small>${p.is_available ? 'Disponibile' : 'Non disponibile'}</small>
+      </div>
+      <p style="margin:.5rem 0;color:#555">${p.description ? p.description : ''}</p>
+      ${p.ingredients ? `<p><strong>Ingredienti:</strong> ${p.ingredients}</p>` : ''}
+      <div class="actions">
+        <button class="btn">Modifica</button>
+        <button class="btn danger">Elimina</button>
+      </div>
+    `;
+    // actions
+    div.querySelector('.actions .btn').onclick = () => openProductForm(p);
+    div.querySelector('.actions .danger').onclick = () => delProduct(p.id);
+    return div;
+  }
+
+  // ====== CRUD usando Supabase ======
+  async function loadProducts(){
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: false });
+    if (error) { alert(error.message); return; }
+
+    const q = qSearch.value.trim().toLowerCase();
+    list.innerHTML = '';
+    (data||[])
+      .filter(p => !q || (p.name?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q)))
+      .forEach(p => list.appendChild(productCard(p)));
+  }
+
+  async function submitProduct(e){
+    e.preventDefault();
+    const id = document.getElementById('p-id').value.trim();
+    const body = {
+      name: document.getElementById('p-name').value.trim(),
+      category: document.getElementById('p-cat').value.trim() || null,
+      image_url: document.getElementById('p-img').value.trim() || null,
+      description: document.getElementById('p-desc').value.trim() || null,
+      ingredients: document.getElementById('p-ing').value.trim() || null,
+      is_available: document.getElementById('p-available').value === 'true',
+      tags: document.getElementById('p-tags').value
+        ? document.getElementById('p-tags').value.split(',').map(s=>s.trim()).filter(Boolean)
+        : [],
+      sort_order: Number(document.getElementById('p-order').value || 0)
+    };
+    if(!body.name){ alert('Nome richiesto'); return; }
+
+    if (id) {
+      const { error } = await supabase.from('products').update(body).eq('id', id);
+      if (error) { alert(error.message); return; }
+    } else {
+      const { error } = await supabase.from('products').insert(body);
+      if (error) { alert(error.message); return; }
+    }
+    toggleProductModal(false);
+    await loadProducts();
+  }
+
+  async function delProduct(id){
+    if(!confirm('Eliminare prodotto?')) return;
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) { alert(error.message); return; }
+    await loadProducts();
+  }
+  window.delProduct = delProduct;
+
+  // Eventos
+  document.getElementById('productForm').addEventListener('submit', submitProduct);
+  document.getElementById('search').addEventListener('input', loadProducts);
+
+  // Boot
+  (async function init(){
+    const ok = await ensureManager();
+    if (!ok) return;
+    document.getElementById('app').hidden = false;
+    await loadProducts();
+  })();
 </script>
 </body>
 </html>
