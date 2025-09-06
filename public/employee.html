@@ -59,6 +59,7 @@
 
     td[contenteditable="true"]{outline:none}
     td.edited{box-shadow:inset 0 0 0 2px #f59e0b;border-radius:6px}
+    .tag{display:inline-block;padding:.25rem .5rem;border-radius:999px;border:1px solid var(--border);font-size:12px;color:#111827;margin:2px}
   </style>
 </head>
 <body>
@@ -110,143 +111,259 @@
     </div>
   </div>
 
-<script>
-  // ===== SEED (sostituire con dati da DB) =====
-  const seedRows = [
-    { id:1, name:"Steven A.", role:"Banco",       days:["OFF","15:15-23:45","15:15-23:45","15:15-23:45","15:15-23:45","11:00-19:30","11:00-19:30"] },
-    { id:2, name:"Angela G.", role:"Banco",       days:["15:15-23:45","15:15-23:45","15:15-23:45","OFF","15:15-23:45","15:15-23:45","15:15-23:45"] },
-    { id:3, name:"Kevin L.",  role:"Laboratorio", days:["08:30-15:30","08:30-15:30","OFF","08:30-15:30","08:30-15:30","08:30-15:30","08:30-15:30"] },
-    { id:4, name:"Lukshan P.",role:"Laboratorio", days:["16:15-23:45","OFF","10:30-17:30","16:15-23:45","16:15-23:45","16:15-23:45","16:15-23:45"] }
-  ];
+<!-- Supabase -->
+<script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-  // Sugerido para el backend: endpoint bulk upsert
-  const API = { shifts:'/api/shifts/bulk' };
-  function authHeader(){ const t=localStorage.getItem('token'); return t?{Authorization:'Bearer '+t}:{ }; }
+  // ==== CONFIG SUPABASE ====
+  const SUPABASE_URL = "https://tcfmeggqhxcnihkmnkqs.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjZm1lZ2dxaHhjbmloa21ua3FzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxOTAzMjUsImV4cCI6MjA3Mjc2NjMyNX0.VYkrvIVWti57W9UOnQcCvywmonWGyrtIT4KAzszbiFs";
+  // ⚠️ No pongas la service key en el front.
 
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // ==== DOM refs ====
   const tbody = document.querySelector('#schedule tbody');
   const managerMode = document.getElementById('managerMode');
   const saveBtn = document.getElementById('saveBtn');
   const weekStartInp = document.getElementById('weekStart');
   const matesDaySel = document.getElementById('matesDay');
+  const matesBanco = document.getElementById('mates-banco');
+  const matesLab = document.getElementById('mates-lab');
 
+  // ==== Utils fecha/horas ====
   function toISO(d){ return d.toISOString().slice(0,10); }
   function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
   function startOfWeek(d){ const x=new Date(d); const w=(x.getDay()+6)%7; x.setDate(x.getDate()-w); x.setHours(0,0,0,0); return x; }
   function range7(from){ return Array.from({length:7},(_,i)=>addDays(from,i)); }
+  function hhmm(t){ return (t||'').slice(0,5); }
+  function initials(name){ return (name||'').split(/\s+/).map(s=>s[0]).join('').slice(0,2).toUpperCase(); }
   function parseHours(span){
     if(!span||/off/i.test(span)) return 0;
     const m=span.match(/(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})/);
     if(!m) return 0;
-    const s=+m[1]*60+ +m[2]; let e=+m[3]*60+ +m[4];
-    let diff=e-s; if(diff<0) diff+=1440;
-    return diff/60;
+    const s=+m[1]*60+ +m[2]; let e=+m[3]*60+ +m[4]; let diff=e-s; if(diff<0) diff+=1440; return diff/60;
   }
-  function initials(name){ return (name||'').split(/\s+/).map(s=>s[0]).join('').slice(0,2).toUpperCase(); }
-
-  let weekStart = startOfWeek(new Date());
-  weekStartInp.value = toISO(weekStart);
-
-  const edits = new Map(); // `${empId}-${idx}` -> "OFF" | "HH:MM-HH:MM"
 
   function makeEmpCell(name, role){
     return `<div class="emp"><div class="avatar">${initials(name)}</div><div><div class="name">${name}</div><small>${role||''}</small></div></div>`;
   }
 
-  function render(){
-    tbody.innerHTML='';
-    seedRows.forEach(emp=>{
-      let tot=0; const tr=document.createElement('tr');
-      tr.innerHTML = `<td>${makeEmpCell(emp.name,emp.role)}</td>`;
+  // ==== Estado ====
+  let employees = [];      // [{id,name,role,department,is_active}]
+  let shifts = [];         // [{id, employee_id, date, start_time, end_time, off, break_minutes}]
+  let weekStart = startOfWeek(new Date());
+  weekStartInp.value = toISO(weekStart);
+  const edits = new Map(); // `${empId}-${idx}` -> "OFF" | "HH:MM-HH:MM"
 
-      emp.days.forEach((orig,idx)=>{
-        const key=`${emp.id}-${idx}`; const value=edits.has(key)?edits.get(key):orig;
-        const td=document.createElement('td');
-        td.dataset.empId=emp.id; td.dataset.dayIdx=idx; td.setAttribute('data-day-idx',idx);
-        td.textContent=value;
-        if(/off/i.test(value)) td.classList.add('off');
-        if(managerMode.checked){ td.contentEditable='true'; } else { td.removeAttribute('contenteditable'); td.classList.remove('edited'); }
-        td.addEventListener('dblclick',()=>{
-          const current = td.textContent.trim();
-          const v = /off/i.test(current) ? '09:00-18:00' : 'OFF';
-          td.textContent=v; td.classList.toggle('off',/off/i.test(v)); markEdited(td);
+  // ==== Fetch a Supabase ====
+  async function getEmployees(){
+    const { data, error } = await supabase
+      .from('employees')
+      .select('*')
+      .eq('is_active', true)
+      .order('name', { ascending: true });
+    if (error) throw error;
+    return data;
+  }
+
+  async function getShifts(fromISO, toISO){
+    const { data, error } = await supabase
+      .from('shifts')
+      .select('*')
+      .gte('date', fromISO)
+      .lte('date', toISO);
+    if (error) throw error;
+    return data;
+  }
+
+  async function saveShiftsBulk(items){
+    // RPC definida en la DB: upsert_shifts_bulk(payload jsonb)
+    const { data, error } = await supabase.rpc('upsert_shifts_bulk', {
+      payload: { items }
+    });
+    if (error) throw error;
+    return data;
+  }
+
+  // ==== Render semanal ====
+  function renderWeek(){
+    tbody.innerHTML = '';
+    const days = range7(weekStart);
+    const dayKeys = days.map(d=> toISO(d));
+
+    for (const emp of employees){
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${makeEmpCell(emp.name, emp.role)}</td>`;
+      let tot = 0;
+
+      dayKeys.forEach((k, idx)=>{
+        const dayShifts = shifts.filter(s => String(s.employee_id)===String(emp.id) && String(s.date)===k);
+        let cell = '';
+        if (dayShifts.length){
+          let sum = 0;
+          cell = dayShifts.map(s=>{
+            if (s.off || !s.start_time || !s.end_time) return 'OFF';
+            const line = `${hhmm(s.start_time)}-${hhmm(s.end_time)}${s.break_minutes?` (−${s.break_minutes}′)`:''}`;
+            // calcular horas
+            const h = parseHours(`${hhmm(s.start_time)}-${hhmm(s.end_time)}`);
+            sum += h;
+            return line;
+          }).join('<br>');
+          tot += sum;
+        } else {
+          cell = 'OFF';
+        }
+
+        const td = document.createElement('td');
+        td.dataset.empId = emp.id;
+        td.dataset.dayIdx = idx;
+        td.setAttribute('data-day-idx', idx);
+        td.innerHTML = cell;
+        if (cell==='OFF') td.classList.add('off');
+
+        if (managerMode.checked) td.contentEditable = 'true';
+        td.addEventListener('dblclick', ()=>{
+          const cur = td.textContent.trim();
+          const v = /off/i.test(cur) ? '09:00-18:00' : 'OFF';
+          td.textContent = v;
+          td.classList.toggle('off', /off/i.test(v));
+          markEdited(td);
         });
-        td.addEventListener('input',()=> markEdited(td));
+        td.addEventListener('input', ()=> markEdited(td));
+
         tr.appendChild(td);
-        tot += parseHours(value);
       });
 
-      const tdTot=document.createElement('td');
-      tdTot.className='right';
+      const tdTot = document.createElement('td');
+      tdTot.className = 'right';
+      // re-calcula leyendo las celdas editadas (después)
       tdTot.textContent = Math.round(tot).toString();
       tr.appendChild(tdTot);
       tbody.appendChild(tr);
-    });
+    }
+
+    // Recalcular totales tras permitir edición
+    [...tbody.querySelectorAll('tr')].forEach(recalcRow);
   }
 
   function markEdited(td){
     if(!managerMode.checked) return;
-    const empId=td.dataset.empId; const idx=td.dataset.dayIdx; const val=td.textContent.trim();
+    const empId = td.dataset.empId;
+    const idx = td.dataset.dayIdx;
+    const val = td.textContent.trim();
     edits.set(`${empId}-${idx}`, val);
-    td.classList.add('edited'); saveBtn.disabled=false; recalcRow(td.closest('tr'));
+    td.classList.add('edited'); saveBtn.disabled = false;
+    recalcRow(td.closest('tr'));
   }
 
   function recalcRow(tr){
     const dayTds=[...tr.querySelectorAll('td[data-day-idx]')];
-    let tot=0; dayTds.forEach(td=>{ tot+=parseHours(td.textContent.trim());});
-    tr.querySelector('.right').textContent=Math.round(tot).toString();
+    let tot = 0;
+    dayTds.forEach(td => { tot += parseHours(td.textContent.trim()); });
+    tr.querySelector('.right').textContent = Math.round(tot).toString();
   }
 
+  // ==== Colleghi di turno (Banco/Laboratorio) ====
+  function renderMates(){
+    const idx = Number(matesDaySel.value)||0;
+    const dayISO = toISO(addDays(weekStart, idx));
+    const today = shifts.filter(s => String(s.date)===dayISO);
+    const banco = [], lab = [];
+
+    for (const s of today){
+      const emp = employees.find(e => String(e.id)===String(s.employee_id));
+      if (!emp) continue;
+      if (s.off) continue;
+      const line = `<span class="tag"><strong>${emp.name}</strong> ${hhmm(s.start_time)}-${hhmm(s.end_time)}</span>`;
+      // Regla pedida: Kevin y Lukshan → laboratorio, resto banco, o usa department si viene
+      const dep = (emp.department||'').toLowerCase();
+      const forceLab = /^kevin\b/i.test(emp.name) || /^lukshan\b/i.test(emp.name);
+      if (forceLab || dep==='laboratorio' || /lab/i.test(emp.role||'')) lab.push(line); else banco.push(line);
+    }
+
+    matesBanco.innerHTML = banco.length ? banco.join(' ') : '— nessun turno —';
+    matesLab.innerHTML   = lab.length   ? lab.join(' ')   : '— nessun turno —';
+  }
+
+  // ==== Guardar cambios (bulk) ====
   async function saveChanges(){
-    if(edits.size===0) return;
-    const payload=[];
+    if (edits.size===0) return;
+    const payload = [];
     edits.forEach((val,key)=>{
-      const [empId,idx]=key.split('-');
+      const [empId, idx] = key.split('-');
       const date = toISO(addDays(weekStart, Number(idx)));
-      if(/off/i.test(val)||val===''){ payload.push({ employee_id:Number(empId), date, off:true }); }
-      else{
-        const m=val.match(/(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})/);
-        if(!m) return;
-        payload.push({ employee_id:Number(empId), date, start_time:`${m[1]}:${m[2]}`, end_time:`${m[3]}:${m[4]}` });
+      if (/off/i.test(val) || val==='') {
+        payload.push({ employee_id: Number(empId), date, off: true });
+      } else {
+        const m = val.match(/(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})/);
+        if (!m) return;
+        payload.push({
+          employee_id: Number(empId),
+          date,
+          start_time: `${m[1]}:${m[2]}`,
+          end_time: `${m[3]}:${m[4]}`
+        });
       }
     });
 
     try{
-      // Implementare sul backend: POST /api/shifts/bulk  -> {items:[...], week_start:"YYYY-MM-DD"}
-      const res = await fetch(API.shifts, {
-        method:'POST',
-        headers:{'Content-Type':'application/json', ...authHeader()},
-        body: JSON.stringify({ items: payload, week_start: toISO(weekStart) })
-      });
-      if(!res.ok){ console.warn('Save error', await res.text()); alert('Errore nel salvataggio.'); return; }
-      edits.clear(); saveBtn.disabled=true; alert('Modifiche salvate!');
-    }catch(err){ console.error(err); alert('Errore di rete durante il salvataggio.'); }
+      await saveShiftsBulk(payload);
+      edits.clear();
+      saveBtn.disabled = true;
+
+      // refrescar semana
+      const fromISO = toISO(weekStart);
+      const toISOstr = toISO(addDays(weekStart, 6));
+      shifts = await getShifts(fromISO, toISOstr);
+      renderWeek();
+      renderMates();
+      alert('Modifiche salvate!');
+    }catch(err){
+      console.error(err);
+      alert('Errore nel salvataggio: ' + (err.message || err));
+    }
   }
 
-  function renderMates(){
-    const idx = Number(matesDaySel.value)||0;
-    const banco=[]; const lab=[];
-    seedRows.forEach(r=>{
-      const turno=(edits.get(`${r.id}-${idx}`) ?? r.days[idx])||'';
-      if(!/off/i.test(turno)&&turno){
-        const line = `${r.name} ${turno}`;
-        if(/laboratorio/i.test(r.role) || /^kevin\b/i.test(r.name) || /^lukshan\b/i.test(r.name)) lab.push(line);
-        else banco.push(line);
-      }
-    });
-    document.getElementById('mates-banco').textContent=banco.join(', ')||'— nessun turno —';
-    document.getElementById('mates-lab').textContent=lab.join(', ')||'— nessun turno —';
-  }
-
-  document.getElementById('prevW').addEventListener('click',()=>{ weekStart = addDays(weekStart,-7); weekStartInp.value=toISO(weekStart); render(); renderMates(); });
-  document.getElementById('thisW').addEventListener('click',()=>{ weekStart = startOfWeek(new Date()); weekStartInp.value=toISO(weekStart); render(); renderMates(); });
-  document.getElementById('nextW').addEventListener('click',()=>{ weekStart = addDays(weekStart, 7); weekStartInp.value=toISO(weekStart); render(); renderMates(); });
-  weekStartInp.addEventListener('change',()=>{ weekStart = startOfWeek(new Date(weekStartInp.value)); render(); renderMates(); });
-  managerMode.addEventListener('change',()=>{ render(); });
-  document.getElementById('saveBtn').addEventListener('click', saveChanges);
+  // ==== Eventos ====
+  document.getElementById('prevW').addEventListener('click', async ()=>{
+    weekStart = addDays(weekStart, -7); weekStartInp.value = toISO(weekStart);
+    await reloadWeek();
+  });
+  document.getElementById('thisW').addEventListener('click', async ()=>{
+    weekStart = startOfWeek(new Date()); weekStartInp.value = toISO(weekStart);
+    await reloadWeek();
+  });
+  document.getElementById('nextW').addEventListener('click', async ()=>{
+    weekStart = addDays(weekStart, 7); weekStartInp.value = toISO(weekStart);
+    await reloadWeek();
+  });
+  weekStartInp.addEventListener('change', async ()=>{
+    weekStart = startOfWeek(new Date(weekStartInp.value));
+    await reloadWeek();
+  });
+  managerMode.addEventListener('change', ()=> renderWeek());
+  saveBtn.addEventListener('click', saveChanges);
   matesDaySel.addEventListener('change', renderMates);
 
-  render();
-  renderMates();
+  // ==== Carga inicial ====
+  async function reloadWeek(){
+    const fromISO = toISO(weekStart);
+    const toISOstr = toISO(addDays(weekStart, 6));
+    shifts = await getShifts(fromISO, toISOstr);
+    renderWeek();
+    renderMates();
+  }
+
+  (async function init(){
+    try{
+      employees = await getEmployees();
+      await reloadWeek();
+    }catch(err){
+      console.error(err);
+      alert('Errore caricando dati da Supabase: ' + (err.message || err));
+    }
+  })();
 </script>
 </body>
 </html>
