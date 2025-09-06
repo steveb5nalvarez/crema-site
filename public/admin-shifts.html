@@ -3,18 +3,28 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>CREMA – Turni (Admin)</title>
+  <title>CREMA – Turni (Store Manager)</title>
   <link rel="stylesheet" href="/styles.css"/>
   <link rel="icon" type="image/svg+xml" href="https://gelatocrema.com/cdn/shop/files/logo_color.svg?v=1693061670&width=100">
   <link rel="alternate icon" href="/favicon.ico">
   <style>
-    .table { width:100%; border-collapse: collapse; }
-    .table th, .table td { border-bottom:1px solid rgba(0,0,0,.08); padding:8px; }
-    .table th { text-align:left; color:#666; font-weight:600; }
-    .pill { background:#fff; border:1px solid rgba(0,0,0,.08); border-radius:10px; padding:8px 10px; }
-    input[type="date"], input[type="time"], input[type="number"], input[type="text"], select {
-      padding:8px 10px; border:1px solid rgba(0,0,0,.12); border-radius:8px;
-    }
+    :root{ --bg:#fffce3; --border:#e5e7eb; --primary:#ee7523; }
+    body.admin{ background:var(--bg); }
+    .wrap{max-width:1100px;margin:22px auto;padding:0 16px}
+    .card{background:#fff;border-radius:16px;border:1px solid var(--border);padding:16px 16px 18px;margin-bottom:16px}
+    .card h3{margin:.2rem 0 .75rem}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .row>*{flex:1 1 240px}
+    label{font-weight:600;font-size:.95rem}
+    input,select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px}
+    .btn{background:#111827;color:#fff;border:0;border-radius:999px;padding:10px 14px;font-weight:600;cursor:pointer}
+    .btn.secondary{background:var(--primary)}
+    table{width:100%;border-collapse:separate;border-spacing:0}
+    th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left}
+    th{background:#f9fafb;font-weight:700}
+    .pill{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:.25rem .6rem;margin:.15rem;font-size:.85rem}
+    .actions{display:flex;gap:8px}
+    .muted{color:#667085}
   </style>
 </head>
 <body class="admin">
@@ -24,239 +34,243 @@
       <img src="https://gelatocrema.com/cdn/shop/files/logo_color.svg?v=1693061670&width=100" alt="CREMA" style="height:40px;width:auto">
     </a>
     <div style="margin-left:auto;display:flex;gap:10px">
-      <button class="btn" onclick="location.href='/admin.html'">Prodotti</button>
+      <button class="btn" onclick="location.href='/index.html'">Sito</button>
+      <button class="btn" onclick="location.href='/admin-shifts.html'">Turni</button>
       <button class="btn" onclick="location.href='/employee.html'">Area dipendente</button>
-      <button class="btn primary" onclick="logout()">Logout</button>
+      <button class="btn secondary" onclick="logout()">Logout</button>
     </div>
   </div>
 </header>
 
-<main class="container">
-  <h1 class="cormorant">Calendario turni</h1>
-
-  <!-- Settimana -->
-  <section class="card" style="margin-bottom:1rem">
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <label>Settimana di:</label>
-      <input type="date" id="weekStart"/>
-      <button class="btn" onclick="prevWeek()">◀</button>
-      <button class="btn" onclick="thisWeek()">Oggi</button>
-      <button class="btn" onclick="nextWeek()">▶</button>
-      <span id="rangeLabel" style="margin-left:auto;color:#666"></span>
-    </div>
-  </section>
-
-  <!-- Gestione dipendenti -->
-  <section class="card" style="margin-bottom:1rem">
-    <h3>Dipendenti</h3>
-  <div style="display:flex;gap:10px;flex-wrap:wrap">
-  <input id="e-name" placeholder="Nome e cognome"/>
-  <input id="e-role" placeholder="Ruolo (es. Bancone)"/>
-  <input id="e-email" type="email" placeholder="Email"/>
-  <input id="e-pass" type="password" placeholder="Password iniziale"/>
-  <label style="display:flex;gap:6px;align-items:center">
-    <input type="checkbox" id="e-active" checked/> Attivo
-  </label>
-  <button class="btn primary" onclick="addEmployee()">Aggiungi</button>
-</div>
-  
-    <table id="empTable" class="table" style="margin-top:10px"></table>
-  </section>
-
-  <!-- Nuovo turno -->
+<main class="wrap" id="app" hidden>
+  <!-- Alta de dipendente -->
   <section class="card">
-    <h3>Nuovo turno</h3>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <select id="s-emp"></select>
-      <input type="date" id="s-date"/>
-      <input type="time" id="s-start"/>
-      <input type="time" id="s-end"/>
-      <input type="number" id="s-break" placeholder="Pausa (min)" min="0" step="5" style="width:140px"/>
-      <input type="text" id="s-notes" placeholder="Note (opzionale)" style="flex:1"/>
-      <button class="btn primary" onclick="addShift()">Aggiungi turno</button>
+    <h3>Nuovo dipendente</h3>
+    <div class="row">
+      <div><label>Nome</label><input id="firstName" placeholder="Mario"/></div>
+      <div><label>Cognome</label><input id="lastName" placeholder="Rossi"/></div>
+      <div><label>Email</label><input id="email" type="email" placeholder="mario@azienda.it"/></div>
+      <div><label>Password</label><input id="password" type="password" placeholder="Min 8 caratteri"/></div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <div><label>Ruolo</label>
+        <select id="role"><option>Banco</option><option>Laboratorio</option></select>
+      </div>
+      <div><label>Reparto</label>
+        <select id="department"><option value="banco">banco</option><option value="laboratorio">laboratorio</option></select>
+      </div>
+    </div>
+    <div style="margin-top:12px">
+      <button class="btn" id="btnCreate">➕ Crea dipendente</button>
+      <span class="muted">Verrà creato l’utente Auth, il profilo e la riga in <code>employees</code>.</span>
     </div>
   </section>
 
-  <!-- Calendario settimanale -->
-  <section style="margin-top:1rem">
-    <div id="calendar"></div>
+  <!-- Caricare busta paga -->
+  <section class="card">
+    <h3>Busta paga</h3>
+    <div class="row">
+      <div>
+        <label>Dipendente</label>
+        <select id="payEmployee"></select>
+      </div>
+      <div><label>Periodo (inizio)</label><input type="date" id="payStart"/></div>
+      <div><label>Periodo (fine)</label><input type="date" id="payEnd"/></div>
+      <div><label>Importo netto (EUR)</label><input id="payAmount" type="number" step="0.01" placeholder="0.00"/></div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <div><input type="file" id="payFile" accept="application/pdf"/></div>
+      <div><button class="btn" id="btnUploadPayslip">📄 Carica busta paga</button></div>
+    </div>
+  </section>
+
+  <!-- Approvazioni -->
+  <section class="card">
+    <h3>Richieste di cambio turno</h3>
+    <table id="tblSwaps">
+      <thead><tr><th>Richiedente</th><th>Con</th><th>Da</th><th>A</th><th>Messaggio</th><th>Stato</th><th class="actions">Azioni</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h3>Richieste giorno OFF</h3>
+    <table id="tblDayOff">
+      <thead><tr><th>Dipendente</th><th>Data</th><th>Motivo</th><th>Stato</th><th class="actions">Azioni</th></tr></thead>
+      <tbody></tbody>
+    </table>
   </section>
 </main>
 
-<script>
-/* ======== AUTH ======== */
-function authHeader(){
-  const t = localStorage.getItem('token');
-  return t ? { 'Authorization': 'Bearer ' + t } : {};
-}
-function logout(){
-  localStorage.removeItem('token');
-  location.href = '/login.html';   // redirect corretto
-}
+<script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+  const supabase = createClient(
+    "https://tcfmeggqhxcnihkmnkqs.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjZm1lZ2dxaHhjbmloa21ua3FzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxOTAzMjUsImV4cCI6MjA3Mjc2NjMyNX0.VYkrvIVWti57W9UOnQcCvywmonWGyrtIT4KAzszbiFs"
+  );
 
-/* ======== API ======== */
-const API = {
-  employees: '/api/employees',
-  shifts: '/api/shifts'
-};
+  // helpers
+  const $ = s => document.querySelector(s);
+  const $$ = s => document.querySelectorAll(s);
+  const toast = msg => alert(msg);
+  window.logout = async () => { await supabase.auth.signOut(); location.href='/index.html'; };
 
-/* ======== DATE UTILS ======== */
-function toISO(d){ return d.toISOString().slice(0,10); }
-function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
-function startOfWeek(d){
-  const x=new Date(d);
-  const day=(x.getDay()+6)%7; // lun=0
-  x.setDate(x.getDate()-day);
-  x.setHours(0,0,0,0);
-  return x;
-}
-function hhmmLocal(t){ return (t||'').slice(0,5); }
+  // gate solo manager
+  async function ensureManager(){
+    const { data: { user } } = await supabase.auth.getUser();
+    if(!user){ location.href='/index.html'; return false; }
+    const { data, error } = await supabase.from('profiles').select('role').eq('user_id', user.id).single();
+    if(error || !data || data.role!=='manager'){ location.href='/employee.html'; return false; }
+    return true;
+  }
 
-/* ======== VARIABILI ======== */
-let employees = [];
-let shifts = [];
-let week = startOfWeek(new Date());
-
-/* ======== DIPENDENTI ======== */
-async function loadEmployees(){
-  const res = await fetch(API.employees, {headers: { ...authHeader() }});
-  const data = await res.json();
-  if (data.error) { alert(data.error); return; }
-  employees = data;
-  renderEmployees();
-  fillEmpSelect();
-}
-function renderEmployees(){
-  const el = document.getElementById('empTable');
-  el.innerHTML = '<tr><th>Nome</th><th>Ruolo</th><th>Attivo</th><th>Azioni</th></tr>';
-  employees.forEach(e=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><input value="${e.name||''}" data-id="${e.id}" data-k="name"/></td>
-      <td><input value="${e.role||''}" data-id="${e.id}" data-k="role"/></td>
-      <td style="text-align:center"><input type="checkbox" ${e.is_active?'checked':''} data-id="${e.id}" data-k="is_active"/></td>
-      <td>
-        <button class="btn" onclick="saveEmployee(${e.id})">Salva</button>
-        <button class="btn" onclick="delEmployee(${e.id})">Elimina</button>
-      </td>`;
-    el.appendChild(tr);
-  });
-}
-function fillEmpSelect(){
-  const sel = document.getElementById('s-emp');
-  sel.innerHTML = employees.filter(e=>e.is_active).map(e=>`<option value="${e.id}">${e.name} ${e.role?('('+e.role+')'):''}</option>`).join('') || '<option value="">— Nessun dipendente —</option>';
-}
-async function addEmployee(){
-  const payload = {
-    name: document.getElementById('e-name').value.trim(),
-    role: document.getElementById('e-role').value.trim(),
-    is_active: document.getElementById('e-active').checked
-  };
-  if(!payload.name) return alert('Nome richiesto');
-  const res = await fetch(API.employees, {method:'POST', headers:{'Content-Type':'application/json', ...authHeader()}, body: JSON.stringify(payload)});
-  const data = await res.json();
-  if(data.error) return alert(data.error);
-  document.getElementById('e-name').value=''; document.getElementById('e-role').value=''; document.getElementById('e-active').checked=true;
-  loadEmployees();
-}
-async function saveEmployee(id){
-  const inputs = Array.from(document.querySelectorAll(`[data-id="${id}"]`));
-  const body = {};
-  inputs.forEach(i=>{
-    const k=i.dataset.k;
-    body[k] = (i.type==='checkbox') ? i.checked : i.value;
-    if(k==='is_active') body[k] = !!i.checked;
-  });
-  const res = await fetch(API.employees+'/'+id, {method:'PUT', headers:{'Content-Type':'application/json', ...authHeader()}, body: JSON.stringify(body)});
-  const data = await res.json();
-  if(data.error) return alert(data.error);
-  loadEmployees();
-}
-async function delEmployee(id){
-  if(!confirm('Eliminare dipendente?')) return;
-  const res = await fetch(API.employees+'/'+id, {method:'DELETE', headers:{ ...authHeader() }});
-  const data = await res.json();
-  if(data.error) return alert(data.error);
-  loadEmployees(); loadWeek();
-}
-
-/* ======== TURNI ======== */
-function setWeek(d){
-  week = startOfWeek(d);
-  const end = addDays(week,6);
-  document.getElementById('weekStart').value = toISO(week);
-  document.getElementById('rangeLabel').textContent = `${toISO(week)} → ${toISO(end)}`;
-}
-function prevWeek(){ setWeek(addDays(week,-7)); loadWeek(); }
-function nextWeek(){ setWeek(addDays(week, 7)); loadWeek(); }
-function thisWeek(){ setWeek(new Date()); loadWeek(); }
-
-async function loadWeek(){
-  const from = toISO(week);
-  const to = toISO(addDays(week,6));
-  const res = await fetch(`${API.shifts}?from=${from}&to=${to}`, {headers:{ ...authHeader() }});
-  const data = await res.json();
-  if (data.error) { alert(data.error); return; }
-  shifts = data;
-  renderCalendar();
-}
-async function addShift(){
-  const payload = {
-    employee_id: document.getElementById('s-emp').value,
-    work_date: document.getElementById('s-date').value,
-    start_time: document.getElementById('s-start').value,
-    end_time: document.getElementById('s-end').value,
-    break_minutes: parseInt(document.getElementById('s-break').value||'0',10),
-    notes: document.getElementById('s-notes').value.trim()
-  };
-  if(!payload.employee_id || !payload.work_date || !payload.start_time || !payload.end_time) return alert('Completa tutti i campi obbligatori');
-  const res = await fetch(API.shifts, {method:'POST', headers:{'Content-Type':'application/json', ...authHeader()}, body: JSON.stringify(payload)});
-  const data = await res.json();
-  if(data.error) return alert(data.error);
-  document.getElementById('s-date').value=''; document.getElementById('s-start').value=''; document.getElementById('s-end').value=''; document.getElementById('s-break').value=''; document.getElementById('s-notes').value='';
-  loadWeek();
-}
-async function delShift(id){
-  if(!confirm('Eliminare turno?')) return;
-  const res = await fetch(API.shifts+'/'+id, {method:'DELETE', headers:{ ...authHeader() }});
-  const data = await res.json();
-  if(data.error) return alert(data.error);
-  loadWeek();
-}
-function renderCalendar(){
-  const cal = document.getElementById('calendar');
-  const days = Array.from({length:7}).map((_,i)=> toISO(addDays(week,i)));
-  let html = `<div class="grid" style="grid-template-columns: repeat(7, 1fr); gap:12px">`;
-  days.forEach(d=>{
-    const items = shifts.filter(s=> s.work_date===d);
-    html += `<div class="card"><strong>${d}</strong><div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">`;
-    if(!items.length) html += `<div style="color:#999">— nessun turno —</div>`;
-    items.forEach(s=>{
-      const emp = s.employees || {name:'—'};
-      html += `<div class="pill" style="display:flex;justify-content:space-between;gap:8px;align-items:center">
-        <div>
-          <div><strong>${emp.name||'—'}</strong> ${emp.role?`<small class="badge">${emp.role}</small>`:''}</div>
-          <div><small>${hhmmLocal(s.start_time)}–${hhmmLocal(s.end_time)} ${s.break_minutes?`• pausa ${s.break_minutes}’`:''}</small></div>
-          ${s.notes?`<div style="color:#666"><small>${s.notes}</small></div>`:''}
-        </div>
-        <button class="btn" onclick="delShift(${s.id})">Elimina</button>
-      </div>`;
+  // cargar empleados activos en selects (y lista)
+  async function loadEmployees(){
+    const { data, error } = await supabase.from('employees').select('*').eq('is_active', true).order('name',{ascending:true});
+    if(error) throw error;
+    const sel = $('#payEmployee'); sel.innerHTML='';
+    data.forEach(e=>{
+      const opt = document.createElement('option');
+      opt.value = e.id; opt.textContent = `${e.name} ${e.role?`(${e.role})`:''}`;
+      sel.appendChild(opt);
     });
-    html += `</div></div>`;
-  });
-  html += `</div>`;
-  cal.innerHTML = html;
-}
+    return data;
+  }
 
-/* ======== INIT ======== */
-function init(){
-  const t = localStorage.getItem('token');
-  if(!t){ location.href='/login.html'; return; }  // redirect corretto
-  setWeek(new Date());
-  document.getElementById('weekStart').addEventListener('change', e=>{ setWeek(new Date(e.target.value)); loadWeek(); });
-  loadEmployees().then(()=> loadWeek());
-}
-init();
+  // crear empleado -> llama a backend /api/admin/create-employee
+  async function createEmployee(){
+    const first = $('#firstName').value.trim();
+    const last  = $('#lastName').value.trim();
+    const email = $('#email').value.trim();
+    const pass  = $('#password').value;
+    const role  = $('#role').value;
+    const dept  = $('#department').value;
+
+    if(!first || !last || !email || !pass) return toast('Compila tutti i campi.');
+    const fullName = `${first} ${last}`;
+
+    const res = await fetch('/api/admin/create-employee', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ fullName, email, password: pass, role, department: dept })
+    });
+    if(!res.ok){
+      const t = await res.text(); toast('Errore creazione: '+t); return;
+    }
+    toast('Dipendente creato!');
+    await loadEmployees();
+  }
+
+  // upload payslip
+  async function uploadPayslip(){
+    const empId = Number($('#payEmployee').value);
+    const start = $('#payStart').value; const end = $('#payEnd').value;
+    const amt = $('#payAmount').value;
+    const file = $('#payFile').files[0];
+    if(!empId || !start || !end || !file){ return toast('Compila i campi e seleziona PDF.'); }
+
+    // obtener user_id del employee
+    const { data: emp, error: eErr } = await supabase.from('employees').select('id,user_id').eq('id', empId).single();
+    if(eErr || !emp?.user_id) return toast('Employee senza user collegato.');
+
+    const filename = `${start.slice(0,7)}.pdf`;
+    const path = `${emp.user_id}/${filename}`;
+
+    const up = await supabase.storage.from('payslips').upload(path, file, { upsert:true, contentType:file.type });
+    if(up.error) return toast('Errore upload: '+up.error.message);
+
+    const { error: insErr } = await supabase.from('payslips').insert({
+      employee_id: empId, period_start: start, period_end: end,
+      file_path: path, net_amount: amt || null, currency: 'EUR'
+    });
+    if(insErr) return toast('Errore DB: '+insErr.message);
+    toast('Busta paga caricata!');
+  }
+
+  // SWAPS: listar + decidir
+  async function loadSwapRequests(){
+    const { data, error } = await supabase
+      .from('shift_swap_requests')
+      .select('id,status,message,created_at, requester:profiles!requester_uid(full_name), with:profiles!with_uid(full_name), s1:shifts!shift_id_from(id,date,start_time,end_time), s2:shifts!shift_id_to(id,date,start_time,end_time)')
+      .order('created_at', { ascending:false });
+    if(error){ console.error(error); return; }
+
+    const tb = $('#tblSwaps tbody'); tb.innerHTML='';
+    data.forEach(r=>{
+      const tr = document.createElement('tr');
+      const f = s => (s||'').slice(0,5);
+      tr.innerHTML = `
+        <td>${r.requester?.full_name||'—'}</td>
+        <td>${r.with?.full_name||'—'}</td>
+        <td>${r.s1?.date||'—'} ${f(r.s1?.start_time)}-${f(r.s1?.end_time)}</td>
+        <td>${r.s2?.date||'—'} ${f(r.s2?.start_time)}-${f(r.s2?.end_time)}</td>
+        <td>${r.message||''}</td>
+        <td><span class="pill">${r.status}</span></td>
+        <td class="actions">
+          <button class="btn" data-act="approve" data-id="${r.id}">Approva</button>
+          <button class="btn" data-act="decline" data-id="${r.id}">Declina</button>
+        </td>`;
+      tb.appendChild(tr);
+    });
+
+    tb.querySelectorAll('button').forEach(b=>{
+      b.onclick = async () => {
+        const approve = b.dataset.act === 'approve';
+        const { error } = await supabase.rpc('approve_shift_swap', { _req_id: Number(b.dataset.id), _approve: approve });
+        if(error) return toast('Errore: '+error.message);
+        toast(approve?'Approvato':'Declinato');
+        loadSwapRequests(); // refresh
+      };
+    });
+  }
+
+  // DAY OFF: listar + decidir
+  async function loadDayOffRequests(){
+    const { data, error } = await supabase
+      .from('day_off_requests')
+      .select('id,status,date,reason,emp:employees(name),created_at')
+      .order('created_at', { ascending:false });
+    if(error){ console.error(error); return; }
+
+    const tb = $('#tblDayOff tbody'); tb.innerHTML='';
+    data.forEach(r=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${r.emp?.name||'—'}</td>
+        <td>${r.date}</td>
+        <td>${r.reason||''}</td>
+        <td><span class="pill">${r.status}</span></td>
+        <td class="actions">
+          <button class="btn" data-act="approve" data-id="${r.id}">Approva</button>
+          <button class="btn" data-act="decline" data-id="${r.id}">Declina</button>
+        </td>`;
+      tb.appendChild(tr);
+    });
+
+    tb.querySelectorAll('button').forEach(b=>{
+      b.onclick = async () => {
+        const approve = b.dataset.act === 'approve';
+        const { error } = await supabase.rpc('approve_day_off', { _req_id: Number(b.dataset.id), _approve: approve });
+        if(error) return toast('Errore: '+error.message);
+        toast(approve?'Approvato':'Declinato');
+        loadDayOffRequests();
+      };
+    });
+  }
+
+  // UI events
+  $('#btnCreate').onclick = createEmployee;
+  $('#btnUploadPayslip').onclick = uploadPayslip;
+
+  // boot
+  (async function init(){
+    const ok = await ensureManager();
+    if(!ok) return;
+    document.getElementById('app').hidden = false;
+    await loadEmployees();
+    await loadSwapRequests();
+    await loadDayOffRequests();
+  })();
 </script>
 </body>
 </html>
