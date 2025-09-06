@@ -20,13 +20,14 @@ const PORT = process.env.PORT || 3000;
 
 // ==== ENV requeridas ====
 // SUPABASE_URL
-// SUPABASE_SERVICE_ROLE_KEY
+// SUPABASE_SERVICE_ROLE_KEY (o SUPABASE_SERVICE_ROLE)
 // (opcional) PUBLIC_DIR (default: ./public)
 const SUPABASE_URL = process.env.SUPABASE_URL;
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SERVICE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE;
 
 if (!SUPABASE_URL || !SERVICE_KEY) {
-  console.error('Faltan SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY en el .env');
+  console.error('Faltan variables de entorno: SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY/SUPABASE_SERVICE_ROLE');
   process.exit(1);
 }
 
@@ -49,6 +50,15 @@ app.use(express.static(PUBLIC_DIR));
 
 // Healthcheck
 app.get('/healthz', (_, res) => res.status(200).send('ok'));
+
+// Debug ENV (temporal)
+app.get('/debug-env', (req, res) => {
+  res.json({
+    SUPABASE_URL: process.env.SUPABASE_URL || null,
+    SERVICE_KEY_PRESENT: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE),
+    PUBLIC_DIR: PUBLIC_DIR
+  });
+});
 
 // =====================================================
 // Auth helper: verifica token de Supabase y rol = manager
@@ -92,7 +102,9 @@ async function requireManager(req, res, next) {
 app.post('/api/admin/create-employee', requireManager, async (req, res) => {
   try {
     const { fullName, email, password, role, department } = req.body || {};
-    if (!fullName || !email || !password) return res.status(400).send('fullName, email, password sono obbligatori');
+    if (!fullName || !email || !password) {
+      return res.status(400).send('fullName, email, password sono obbligatori');
+    }
 
     // 1) Crea usuario en Auth
     const { data: created, error: aErr } = await admin.auth.admin.createUser({
@@ -130,8 +142,8 @@ app.post('/api/admin/create-employee', requireManager, async (req, res) => {
   }
 });
 
-// Fallback SPA: sirve index.html para rutas GET no resueltas
-app.get('*', (req, res, next) => {
+// ===== Fallback SPA compatible con Express 5 (sin '*') =====
+app.use((req, res, next) => {
   if (req.method !== 'GET') return next();
   res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
