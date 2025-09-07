@@ -14,6 +14,7 @@
       --bg:#fffce3; --card:#ffffff; --ink:#121826; --muted:#667085;
       --primary:#ee7523; --primary-600:#ee7523; --navy:#6a3f24;
       --off:#f8fafc; --accent:#fdecc8; --border:#e5e7eb;
+      --danger:#e11d48; --ok:#10b981;
     }
     *{box-sizing:border-box}
     body.admin{ background: var(--bg); color:var(--ink); }
@@ -29,12 +30,13 @@
     .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0 10px}
     .btn{background:#111827;color:#fff;border:0;border-radius:999px;padding:10px 14px;font-weight:600;cursor:pointer;white-space:nowrap}
     .btn.secondary{background:var(--primary)}
+    .btn.ghost{background:transparent;color:#111827;border:1px solid var(--border)}
     .btn[disabled]{opacity:.6;cursor:not-allowed}
     .switch{display:inline-flex;align-items:center;gap:8px}
     .hint{color:var(--muted);font-size:12px;margin-left:auto}
 
     /* Tabla turnos */
-    .table-wrap{margin-top:14px;border-radius:14px;overflow:auto;border:1px solid var(--border);scroll-behavior:smooth}
+    .table-wrap{margin-top:14px;border-radius:14px;overflow:auto;border:1px solid var(--border)}
     table{border-collapse:separate;border-spacing:0;width:100%;min-width:980px}
     thead th{position:sticky;top:0;z-index:2;background:var(--primary-600);color:white;font-weight:600;font-size:14px;padding:12px;text-align:left}
     thead th:first-child{background:var(--navy)}
@@ -59,8 +61,8 @@
 
     /* status row */
     .status{display:flex;gap:10px;align-items:center;color:#667085;font-size:13px;margin-top:8px}
-    .status .dot{width:8px;height:8px;border-radius:999px;background:#10b981}
-    .status.error .dot{background:#ef4444}
+    .status .dot{width:8px;height:8px;border-radius:999px;background:var(--ok)}
+    .status.error .dot{background:var(--danger)}
 
     /* Personale */
     .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
@@ -68,19 +70,45 @@
     .small{font-size:.9rem;color:#475569}
     .pill{background:#fff;border:1px solid var(--border);border-radius:999px;padding:6px 10px}
     .row{display:flex;gap:10px;flex-wrap:wrap}
-    .row .input, .row select { padding:10px 12px; border:1px solid var(--border); border-radius:10px; }
+    .row .input, .row select { padding:12px 14px; border:1px solid var(--border); border-radius:12px; font-size:16px }
+    .row .input:focus, .row select:focus{ outline:2px solid #1118271a }
     .table-mini{width:100%;border-collapse:separate;border-spacing:0}
     .table-mini th, .table-mini td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:14px}
     .badge{display:inline-block;background:#f8fafc;border:1px solid var(--border);border-radius:999px;padding:2px 8px;font-size:12px}
 
-    /* Responsive niceties */
+    /* Bottom sheet (Add Employee) */
+    .sheet{position:fixed;inset:0;display:none;background:rgba(2,6,23,.4);z-index:999}
+    .sheet.open{display:block}
+    .sheet .panel{
+      position:absolute;left:0;right:0;bottom:0;background:#fff;border-top-left-radius:20px;border-top-right-radius:20px;
+      box-shadow:0 -10px 30px rgba(2,6,23,.15);padding:16px 16px 20px;max-height:90vh;overflow:auto
+    }
+    .sheet .grab{width:44px;height:5px;border-radius:999px;background:#e5e7eb;margin:6px auto 10px}
+    .sheet h3{margin:4px 0 10px}
+    .seg{display:flex;border:1px solid var(--border);border-radius:999px;overflow:hidden}
+    .seg button{flex:1;padding:10px 12px;background:#fff;border:0}
+    .seg button.active{background:#111827;color:#fff}
+    .field{display:grid;gap:6px;margin:10px 0}
+    .field label{font-size:13px;color:#475569}
+    .field input, .field select{padding:12px 14px;border:1px solid var(--border);border-radius:12px;font-size:16px}
+    .inline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .muted{color:#6b7280;font-size:12px}
+    .err{color:var(--danger);font-size:13px;min-height:1.2em}
+    .ok{color:var(--ok);font-size:13px;min-height:1.2em}
+
+    /* FAB mobile */
+    .fab{position:fixed;right:16px;bottom:16px;background:var(--primary);color:#fff;border:0;border-radius:999px;
+      padding:14px 16px;font-weight:700;box-shadow:0 10px 20px rgba(238,117,35,.35);z-index:998}
+    .fab span{font-size:20px;line-height:0;vertical-align:middle;margin-right:6px}
+
+    /* Responsive tweaks */
     @media (max-width:720px){
       .btn{padding:9px 12px;font-size:14px}
       tbody td{padding:10px;font-size:14px}
       .toolbar .hint{flex-basis:100%;margin-left:0}
-      .table-wrap{border-radius:10px}
+      .table-wrap{border-radius:12px}
       .card{border-radius:18px}
-      .row .input, .row select{flex:1 1 140px}
+      .row .input, .row select{flex:1 1 150px}
     }
   </style>
 </head>
@@ -100,35 +128,23 @@
     </div>
   </header>
 
+  <!-- FAB mobile -->
+  <button class="fab" id="fabAdd"><span>＋</span>Dipendente</button>
+
   <!-- app hidden finché non validiamo il ruolo -->
   <main class="wrap" id="app" hidden>
 
-    <!-- ====== REPARTO PERSONALE ====== -->
+    <!-- ====== PERSONALE ====== -->
     <div class="card" id="card-personale">
-      <h1>Personale</h1>
-      <p class="subtitle">Aggiungi nuovi dipendenti. Dopo la creazione potrai programmare i turni (anche automatici per mese/anno).</p>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <h1 style="margin-right:auto">Personale</h1>
+        <button class="btn secondary" id="openSheet">+ Crea</button>
+      </div>
+      <p class="subtitle">Aggiungi dipendenti. Dopo la creazione puoi programmare turni (anche automatici per mese/anno).</p>
 
       <div class="grid2">
-        <!-- Form nuovo dipendente -->
-        <section>
-          <h3>Aggiungi dipendente</h3>
-          <div class="row" id="emp-form">
-            <input id="fullName" class="input" placeholder="Nome e cognome" style="flex:1 1 220px" autocomplete="name">
-            <input id="email" class="input" placeholder="Email" style="flex:1 1 220px" type="email" autocomplete="email">
-            <input id="password" class="input" placeholder="Password" style="flex:1 1 160px" type="password" autocomplete="new-password">
-            <select id="department" aria-label="Reparto">
-              <option value="">Reparto…</option>
-              <option value="banco">Banco</option>
-              <option value="laboratorio">Laboratorio</option>
-            </select>
-            <input id="role" class="input" placeholder="Ruolo (es. Addetto banco)" style="flex:1 1 200px">
-            <button class="btn secondary" id="btnCreateEmp">+ Crea</button>
-          </div>
-          <div class="small" id="emp-msg" style="margin-top:8px"></div>
-        </section>
-
         <!-- Lista dipendenti e ore mese -->
-        <section>
+        <section style="grid-column:1 / -1">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
             <h3 style="margin-right:auto">Elenco dipendenti</h3>
             <span class="small">Mese corrente: <span class="pill" id="monthLabel"></span></span>
@@ -164,10 +180,8 @@
         <button class="btn secondary" id="thisW">Questa settimana</button>
         <button class="btn" id="nextW">Settimana succ. ▶</button>
         <button class="btn" id="saveBtn" disabled>💾 Salva modifiche</button>
-        <!-- Auto generator -->
         <button class="btn" id="autoMonth">Auto mese</button>
         <button class="btn" id="autoYear">Auto anno</button>
-
         <span class="hint">Celle: <b>HH:MM-HH:MM</b> o <b>OFF</b>. Doppio clic per alternare.</span>
       </div>
 
@@ -206,6 +220,62 @@
     </div>
   </main>
 
+  <!-- Bottom-sheet Add Employee -->
+  <div class="sheet" id="sheet">
+    <div class="panel">
+      <div class="grab" role="presentation"></div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <h3 style="margin-right:auto">Nuovo dipendente</h3>
+        <button class="btn ghost" id="closeSheet">Chiudi</button>
+      </div>
+
+      <div class="field">
+        <label for="fullName">Nome e cognome</label>
+        <input id="fullName" placeholder="Es. Mario Rossi" autocomplete="name">
+      </div>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" type="email" placeholder="nome@azienda.it" autocomplete="email">
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <div class="inline" style="width:100%">
+          <input id="password" type="password" placeholder="Min. 6 caratteri" style="flex:1" autocomplete="new-password">
+          <button class="btn ghost" id="togglePwd" type="button">Mostra</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Reparto</label>
+        <div class="seg" role="group" aria-label="Reparto">
+          <button type="button" data-dep="banco" class="active">Banco</button>
+          <button type="button" data-dep="laboratorio">Laboratorio</button>
+        </div>
+        <input id="department" type="hidden" value="banco">
+      </div>
+
+      <div class="field">
+        <label for="role">Ruolo</label>
+        <input id="role" placeholder="Es. Addetto banco">
+      </div>
+
+      <div class="field inline">
+        <label class="inline" style="gap:6px"><input type="checkbox" id="autoM"> Auto-programma mese</label>
+        <label class="inline" style="gap:6px"><input type="checkbox" id="autoY"> Auto-programma anno</label>
+        <span class="muted">Usa la regola oraria predefinita per reparto.</span>
+      </div>
+
+      <div class="err" id="emp-err"></div>
+      <div class="ok" id="emp-ok"></div>
+
+      <div class="inline" style="justify-content:flex-end;margin-top:6px">
+        <button class="btn secondary" id="btnCreateEmp">Crea dipendente</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
@@ -231,17 +301,27 @@
     // ======== REFS ========
     const app = document.getElementById('app');
 
+    // Sheet (mobile add)
+    const sheet = document.getElementById('sheet');
+    const openSheetBtn = document.getElementById('openSheet');
+    const closeSheetBtn = document.getElementById('closeSheet');
+    const fabAdd = document.getElementById('fabAdd');
+
     // Personale
     const fullNameEl = document.getElementById('fullName');
     const emailEl = document.getElementById('email');
     const passwordEl = document.getElementById('password');
-    const departmentEl = document.getElementById('department');
+    const departmentHidden = document.getElementById('department');
     const roleEl = document.getElementById('role');
     const btnCreateEmp = document.getElementById('btnCreateEmp');
     const btnReloadEmp = document.getElementById('btnReloadEmp');
-    const empMsg = document.getElementById('emp-msg');
     const empBody = document.getElementById('empBody');
     const monthLabel = document.getElementById('monthLabel');
+    const autoM = document.getElementById('autoM');
+    const autoY = document.getElementById('autoY');
+    const empErr = document.getElementById('emp-err');
+    const empOk = document.getElementById('emp-ok');
+    const togglePwd = document.getElementById('togglePwd');
 
     // Turni
     const tbody = document.querySelector('#schedule tbody');
@@ -254,6 +334,8 @@
     const matesDaySel = document.getElementById('matesDay');
     const matesBanco = document.getElementById('mates-banco');
     const matesLab = document.getElementById('mates-lab');
+    const autoMonthBtn = document.getElementById('autoMonth');
+    const autoYearBtn = document.getElementById('autoYear');
 
     // ======== UTILS ========
     const toISO = d => d.toISOString().slice(0,10);
@@ -299,96 +381,75 @@
       if (error) throw error; return data;
     }
 
-    // --------- Plantillas de horario por reparto / día de semana ---------
-    // idx: 0=Lun ... 6=Dom
+    // --------- Plantillas (bancone/laboratorio) ----------
     function planByDeptWeekday(department, idx){
       const dep = (department||'').toLowerCase();
-
-      // LAB: Lun–Dom 08:30–15:30
-      if (dep === 'laboratorio') {
-        return ['08:30','15:30']; // tutti i giorni
-      }
-
-      // BANCO: Lun–Ven 15:15–23:45, Sab–Dom 11:00–19:30
-      if (idx <= 4) return ['15:15','23:45']; // L-V
-      return ['11:00','19:30'];               // S-D
+      if (dep === 'laboratorio') return ['08:30','15:30']; // Lun–Dom
+      if (idx <= 4) return ['15:15','23:45'];             // Banco Lun–Ven
+      return ['11:00','19:30'];                           // Banco Sab–Dom
     }
 
-    // Helpers de rango
-    function monthEdges(d){
-      const from = new Date(d.getFullYear(), d.getMonth(), 1);
-      const to   = new Date(d.getFullYear(), d.getMonth()+1, 0);
-      return [from, to];
-    }
-    function yearEdges(y){
-      const from = new Date(y, 0, 1);
-      const to   = new Date(y, 11, 31);
-      return [from, to];
-    }
-    function* eachDay(from, to){
-      const d = new Date(from); d.setHours(0,0,0,0);
-      const end = new Date(to); end.setHours(0,0,0,0);
-      for(; d <= end; d.setDate(d.getDate()+1)) yield new Date(d);
-    }
-
-    // Construye items para RPC bulk en un rango para UN empleado
+    function monthEdges(d){ return [new Date(d.getFullYear(), d.getMonth(), 1), new Date(d.getFullYear(), d.getMonth()+1, 0)]; }
+    function yearEdges(y){ return [new Date(y,0,1), new Date(y,11,31)]; }
+    function* eachDay(from, to){ const d=new Date(from); d.setHours(0,0,0,0); const end=new Date(to); end.setHours(0,0,0,0); for(; d<=end; d.setDate(d.getDate()+1)) yield new Date(d); }
     function buildBulkForEmployee(emp, fromDate, toDate){
-      const out = [];
-      for (const d of eachDay(fromDate, toDate)){
-        const idx = (d.getDay()+6)%7; // 0=Lun..6=Dom
-        const plan = planByDeptWeekday(emp.department, idx);
-        if (!plan) { out.push({ employee_id: emp.id, date: toISO(d), off: true }); continue; }
-        const [start, end] = plan;
-        out.push({
-          employee_id: emp.id,
-          date: toISO(d),
-          start_time: start,
-          end_time: end,
-          break_minutes: 0,
-          break_paid: false
-        });
-      }
-      return out;
+      const out=[]; for(const d of eachDay(fromDate,toDate)){ const idx=(d.getDay()+6)%7; const plan=planByDeptWeekday(emp.department, idx);
+        if(!plan){ out.push({employee_id:emp.id,date:toISO(d),off:true}); continue; }
+        const [start,end]=plan;
+        out.push({employee_id:emp.id,date:toISO(d),start_time:start,end_time:end,break_minutes:0,break_paid:false});
+      } return out;
     }
-
-    // Asignación automática MES actual
-    async function autoAssignMonthFor(targetEmpId = null){
-      const now = new Date();
-      const [from, to] = monthEdges(now);
-      const list = targetEmpId
-        ? employees.filter(e => String(e.id) === String(targetEmpId))
-        : employees.filter(e => e.is_active);
-      if (!list.length) throw new Error('Nessun dipendente selezionato');
-      let items = [];
-      for (const emp of list){ items = items.concat(buildBulkForEmployee(emp, from, to)); }
+    async function autoAssignMonthFor(targetEmpId=null){
+      const now=new Date(); const [from,to]=monthEdges(now);
+      const list = targetEmpId ? employees.filter(e=>String(e.id)===String(targetEmpId)) : employees.filter(e=>e.is_active);
+      if(!list.length) throw new Error('Nessun dipendente selezionato');
+      let items=[]; for(const emp of list){ items=items.concat(buildBulkForEmployee(emp,from,to)); }
+      await saveShiftsBulk(items);
+    }
+    async function autoAssignYearFor(targetEmpId=null){
+      const year=weekStart.getFullYear(); const [from,to]=yearEdges(year);
+      const list = targetEmpId ? employees.filter(e=>String(e.id)===String(targetEmpId)) : employees.filter(e=>e.is_active);
+      if(!list.length) throw new Error('Nessun dipendente selezionato');
+      let items=[]; for(const emp of list){ items=items.concat(buildBulkForEmployee(emp,from,to)); }
       await saveShiftsBulk(items);
     }
 
-    // Asignación automática AÑO (del año de weekStart)
-    async function autoAssignYearFor(targetEmpId = null){
-      const year = weekStart.getFullYear();
-      const [from, to] = yearEdges(year);
-      const list = targetEmpId
-        ? employees.filter(e => String(e.id) === String(targetEmpId))
-        : employees.filter(e => e.is_active);
-      if (!list.length) throw new Error('Nessun dipendente selezionato');
-      let items = [];
-      for (const emp of list){ items = items.concat(buildBulkForEmployee(emp, from, to)); }
-      await saveShiftsBulk(items);
-    }
+    // ======== SHEET logic ========
+    function openSheet(){ sheet.classList.add('open'); setTimeout(()=>fullNameEl.focus(), 0); }
+    function closeSheet(){ sheet.classList.remove('open'); }
+    openSheetBtn.addEventListener('click', openSheet);
+    fabAdd.addEventListener('click', openSheet);
+    closeSheetBtn.addEventListener('click', closeSheet);
+    sheet.addEventListener('click', (e)=>{ if(e.target===sheet) closeSheet(); });
 
-    // === Personale: crea dipendente via server (richiede token di Supabase nel Bearer) ===
+    // reparto segment
+    document.querySelectorAll('.seg button').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        document.querySelectorAll('.seg button').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        departmentHidden.value = btn.dataset.dep;
+      });
+    });
+
+    // toggle password
+    togglePwd.addEventListener('click', ()=>{
+      const type = passwordEl.type === 'password' ? 'text' : 'password';
+      passwordEl.type = type;
+      togglePwd.textContent = type==='password' ? 'Mostra' : 'Nascondi';
+    });
+
+    // === Crear empleado (server) ===
     async function createEmployee(){
-      empMsg.textContent = '';
-      const full_name = fullNameEl.value.trim();
-      const email = emailEl.value.trim();
+      empErr.textContent=''; empOk.textContent='';
+      const full_name = (fullNameEl.value||'').trim();
+      const email = (emailEl.value||'').trim();
       const password = passwordEl.value;
-      const role = roleEl.value.trim() || null;
-      const department = departmentEl.value || null;
+      const role = (roleEl.value||'').trim() || null;
+      const department = departmentHidden.value || null;
 
-      if(!full_name || !email || !password){
-        empMsg.style.color='#b00020'; empMsg.textContent='Compila nome, email e password.'; return;
-      }
+      if(!full_name){ empErr.textContent='Inserisci il nome.'; fullNameEl.focus(); return; }
+      if(!email){ empErr.textContent='Inserisci l’email.'; emailEl.focus(); return; }
+      if(!password || password.length<6){ empErr.textContent='Password minima 6 caratteri.'; passwordEl.focus(); return; }
 
       btnCreateEmp.disabled = true; const old=btnCreateEmp.textContent; btnCreateEmp.textContent='Creazione…';
       try{
@@ -401,33 +462,38 @@
           headers:{ 'Content-Type':'application/json', 'Authorization': 'Bearer ' + token },
           body: JSON.stringify({ fullName: full_name, email, password, role, department })
         });
-
         const out = await res.json().catch(()=>null);
         if(!res.ok){ throw new Error((out && (out.error||out.message)) || 'Errore creazione dipendente'); }
 
-        empMsg.style.color='#0f9d58';
-        empMsg.textContent='Dipendente creato correttamente!';
-        fullNameEl.value=''; emailEl.value=''; passwordEl.value=''; roleEl.value=''; departmentEl.value='';
-
-        // ⚡ Opcional: auto-mese para el creado (si el backend devuelve employee_id)
-        if (out && out.user_id) {
-          await autoAssignMonthFor(out.employee_id || null);
+        empOk.textContent='Dipendente creato!';
+        // Auto-plan se richiesto
+        const justCreated = out?.user_id ? [{ id: out.user_id, is_active:true, department }] : null;
+        if (autoM.checked || autoY.checked){
+          // ricarico employees se no tengo id numerico; por simplicidad disparo contra todos activos
+          const list = await getEmployees();
+          employees = list;
+          if (autoM.checked) await autoAssignMonthFor(null);
+          if (autoY.checked) await autoAssignYearFor(null);
         }
 
+        // limpia campos
+        fullNameEl.value=''; emailEl.value=''; passwordEl.value=''; roleEl.value='';
+        document.querySelectorAll('.seg button').forEach(b=>b.classList.remove('active'));
+        document.querySelector('.seg button[data-dep="banco"]').classList.add('active');
+        departmentHidden.value='banco';
+
         await loadEmployeesMonth();
+        // cierra sheet en móvil
+        setTimeout(closeSheet, 500);
       }catch(e){
-        empMsg.style.color='#b00020';
-        empMsg.textContent = e.message || e;
+        empErr.textContent = e.message || e;
       }finally{
         btnCreateEmp.disabled=false; btnCreateEmp.textContent=old;
       }
     }
 
     // === Personale: lista + ore mese corrente ===
-    function monthLabelText(d){
-      const intl = new Intl.DateTimeFormat('it-IT',{ month:'long', year:'numeric' });
-      return intl.format(d);
-    }
+    function monthLabelText(d){ return new Intl.DateTimeFormat('it-IT',{ month:'long', year:'numeric' }).format(d); }
 
     async function loadEmployeesMonth(){
       empBody.innerHTML = `<tr><td colspan="5" class="small">Caricamento…</td></tr>`;
@@ -437,10 +503,8 @@
 
       try{
         const list = await getEmployees();
-        // turni del mese per tutti
         const monthShifts = await getShifts(fromISO, toISOstr);
 
-        // mappa ore per dipendente
         const hoursByEmp = new Map();
         for(const s of monthShifts){
           if (s.off) continue;
@@ -455,7 +519,6 @@
           hoursByEmp.set(s.employee_id, (hoursByEmp.get(s.employee_id)||0) + h);
         }
 
-        // render
         empBody.innerHTML = '';
         for(const emp of list){
           const tr = document.createElement('tr');
@@ -630,7 +693,7 @@
         td.contentEditable = managerMode.checked ? 'true' : 'false';
       });
     });
-    document.getElementById('autoMonth').addEventListener('click', async ()=>{
+    autoMonthBtn.addEventListener('click', async ()=>{
       try{
         const choice = prompt('ID dipendente (vuoto = tutti gli attivi):','');
         if (!confirm('Generare turni automatici per il mese corrente?')) return;
@@ -643,7 +706,7 @@
         alert('Turni del mese generati.');
       }catch(e){ alert('Errore Auto mese: ' + (e.message||e)); }
     });
-    document.getElementById('autoYear').addEventListener('click', async ()=>{
+    autoYearBtn.addEventListener('click', async ()=>{
       try{
         const choice = prompt('ID dipendente (vuoto = tutti gli attivi):','');
         if (!confirm(`Generare turni automatici per l'anno ${weekStart.getFullYear()}?`)) return;
@@ -656,8 +719,6 @@
         alert('Turni dell’anno generati.');
       }catch(e){ alert('Errore Auto anno: ' + (e.message||e)); }
     });
-    saveBtn.addEventListener('click', saveChanges);
-    matesDaySel.addEventListener('change', renderMates);
     btnCreateEmp.addEventListener('click', createEmployee);
     btnReloadEmp.addEventListener('click', loadEmployeesMonth);
 
@@ -679,10 +740,9 @@
       if(!ok) return;
 
       app.hidden = false;
-      skel.style.display = 'block';
 
-      // Probar disponibilidad de RPC
-      try {
+      try{
+        // Probar disponibilidad de RPC
         await supabase.rpc('upsert_shifts_bulk', { payload: { items: [] } });
         rpcAvailable = true;
       } catch {
@@ -702,8 +762,6 @@
         statusRow.classList.add('error');
         statusText.textContent = 'Errore caricamento';
         alert('Errore caricando dati da Supabase: ' + (err.message || err));
-      }finally{
-        skel.style.display = 'none';
       }
     })();
   </script>
