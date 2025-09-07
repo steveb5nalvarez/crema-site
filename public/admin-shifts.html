@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>CREMA – Turni settimanali (manager)</title>
+  <title>CREMA – Turni & Personale (manager)</title>
 
   <link rel="stylesheet" href="/styles.css"/>
   <link rel="icon" type="image/svg+xml" href="https://gelatocrema.com/cdn/shop/files/logo_color.svg?v=1693061670&width=100">
@@ -11,37 +11,39 @@
 
   <style>
     :root{
-      --bg:#f1e4b2; --card:#ffffff; --ink:#121826; --muted:#667085;
+      --bg:#fffce3; --card:#ffffff; --ink:#121826; --muted:#667085;
       --primary:#ee7523; --primary-600:#ee7523; --navy:#6a3f24;
       --off:#f8fafc; --accent:#fdecc8; --border:#e5e7eb;
     }
-    body.admin { background: var(--background-1, #fffce3); }
     *{box-sizing:border-box}
+    body.admin{ background: var(--bg); color:var(--ink); }
+    a{ color:inherit }
 
-    .wrap{max-width:1180px;margin:24px auto;padding:0 16px}
-    .card{background:var(--card);border-radius:28px;box-shadow:0 10px 30px rgba(2,6,23,.08);padding:24px 20px 28px}
+    .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
+    .card{background:var(--card);border-radius:24px;box-shadow:0 10px 30px rgba(2,6,23,.08);padding:20px}
     h1{margin:8px 0 4px;font-size:clamp(22px,3.2vw,36px)}
+    h3{margin:0 0 8px}
     .subtitle{color:var(--muted);font-size:14px;max-width:70ch}
 
-    .toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:14px 0 10px}
-    .btn{background:#111827;color:#fff;border:0;border-radius:999px;padding:10px 14px;font-weight:600;cursor:pointer}
+    /* Toolbar */
+    .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0 10px}
+    .btn{background:#111827;color:#fff;border:0;border-radius:999px;padding:10px 14px;font-weight:600;cursor:pointer;white-space:nowrap}
     .btn.secondary{background:var(--primary)}
-    .btn.danger{background:#b91c1c}
     .btn[disabled]{opacity:.6;cursor:not-allowed}
     .switch{display:inline-flex;align-items:center;gap:8px}
     .hint{color:var(--muted);font-size:12px;margin-left:auto}
 
-    .table-wrap{margin-top:18px;border-radius:16px;overflow:auto;border:1px solid var(--border)}
+    /* Tabla turnos */
+    .table-wrap{margin-top:14px;border-radius:14px;overflow:auto;border:1px solid var(--border);scroll-behavior:smooth}
     table{border-collapse:separate;border-spacing:0;width:100%;min-width:980px}
-    thead th{position:sticky;top:0;z-index:3;background:var(--primary-600);color:white;font-weight:600;font-size:14px;padding:14px 12px;text-align:left}
-    thead th:first-child{background:var(--navy); left:0; position:sticky; z-index:4}
-    tbody td{background:#fff;padding:14px 12px;border-bottom:1px solid var(--border);font-size:15px}
+    thead th{position:sticky;top:0;z-index:2;background:var(--primary-600);color:white;font-weight:600;font-size:14px;padding:12px;text-align:left}
+    thead th:first-child{background:var(--navy)}
+    tbody td{background:#fff;padding:12px;border-bottom:1px solid var(--border);font-size:15px;vertical-align:top}
     tbody tr:last-child td{border-bottom:none}
     tbody td.off{background:var(--accent)}
-    tbody td:first-child{position:sticky; left:0; z-index:2; background:#fff}
     .right{text-align:right}
 
-    .emp{display:flex;align-items:center;gap:12px}
+    .emp{display:flex;align-items:center;gap:10px}
     .avatar{--s:34px;width:var(--s);height:var(--s);border-radius:999px;background:linear-gradient(135deg,#ffd3a8,#ee7523);display:grid;place-items:center;font-weight:700;color:#0b1324}
     .emp .name{font-weight:700}
     .emp small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
@@ -51,7 +53,7 @@
     .tag{display:inline-block;padding:.25rem .5rem;border-radius:999px;border:1px solid var(--border);font-size:12px;color:#111827;margin:2px}
 
     /* Skeleton */
-    .sk{display:grid;gap:10px}
+    .sk{display:grid;gap:10px;padding:12px}
     .sk .bar{height:14px;border-radius:999px;background:linear-gradient(90deg,#eee,#f6f6f6,#eee);background-size:200% 100%;animation:s 1.1s linear infinite}
     @keyframes s{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
@@ -71,115 +73,66 @@
     .table-mini th, .table-mini td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:14px}
     .badge{display:inline-block;background:#f8fafc;border:1px solid var(--border);border-radius:999px;padding:2px 8px;font-size:12px}
 
-    /* ===== Mobile-first tweaks ===== */
-    @media (max-width: 820px){
-      .wrap{margin:14px auto}
-      .card{border-radius:20px;padding:18px 14px 22px}
-      .toolbar{gap:8px}
-      .hint{display:none}
-      table{min-width:720px}
-      tbody td{padding:12px 10px}
-      thead th{padding:12px 10px}
-      .btn{padding:10px 12px}
-      /* Más espacio para tocar celdas */
-      td[data-day-idx]{cursor:pointer}
+    /* Responsive niceties */
+    @media (max-width:720px){
+      .btn{padding:9px 12px;font-size:14px}
+      tbody td{padding:10px;font-size:14px}
+      .toolbar .hint{flex-basis:100%;margin-left:0}
+      .table-wrap{border-radius:10px}
+      .card{border-radius:18px}
+      .row .input, .row select{flex:1 1 140px}
     }
-
-    /* Botón flotante guardar en móvil */
-    .save-fab{
-      position: fixed; inset:auto 16px 16px 16px;
-      display:none; gap:10px; align-items:center; justify-content:center;
-      background:var(--primary); color:#fff; border:none; border-radius:16px;
-      padding:14px 16px; font-weight:700; box-shadow:0 10px 30px rgba(0,0,0,.18);
-      z-index:999;
-    }
-    @media (min-width:821px){ .save-fab{ display:none !important; } }
-
-    /* ====== Modal editor celda (móvil y desktop) ====== */
-    .modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.35); padding:16px; z-index:998; }
-    .modal.open { display:flex; }
-    .modal-content { width:100%; max-width:460px; background:#fff; border-radius:16px; overflow:hidden; }
-    .modal-header { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid rgba(0,0,0,.08); }
-    .modal-body { padding:16px; display:grid; gap:12px; }
-    .modal-body label{ font-size:.92rem; font-weight:600; color:#334155 }
-    .modal-body .row{ display:flex; gap:10px; align-items:center }
-    .modal-body input[type="time"], .modal-body input[type="number"]{
-      width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px;
-    }
-    .modal-footer{ display:flex; gap:10px; justify-content:flex-end; padding:12px 16px; border-top:1px solid rgba(0,0,0,.08)}
-    .modal .switch-l{display:flex;align-items:center;gap:8px}
   </style>
 </head>
 
 <body class="admin">
   <header class="nav">
     <div class="nav-inner container">
-      <a href="/" class="brand">
+      <a href="/" class="brand" aria-label="Home CREMA">
         <img src="https://gelatocrema.com/cdn/shop/files/logo_color.svg?v=1693061670&width=100" alt="CREMA" style="height:40px;width:auto">
       </a>
-      <div style="margin-left:auto;display:flex;gap:10px">
+      <div style="margin-left:auto;display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn" onclick="location.href='/index.html'">Sito</button>
         <button class="btn" onclick="location.href='/admin.html'">Prodotti</button>
         <button class="btn" onclick="location.href='/employee.html'">Area dipendente</button>
-        <button class="btn primary" onclick="logout()">Logout</button>
+        <button class="btn secondary" onclick="logout()">Logout</button>
       </div>
     </div>
   </header>
 
   <!-- app hidden finché non validiamo il ruolo -->
- <!-- MODAL: NUEVO DIPENDENTE -->
-<div id="empModal" class="modal" aria-hidden="true">
-  <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="empModalTitle">
-    <div class="modal-header">
-      <strong id="empModalTitle">Nuovo dipendente</strong>
-      <button class="btn" id="btnCloseEmp">Chiudi</button>
-    </div>
-    <div class="modal-body">
-      <form id="empForm">
-        <div class="two-col">
-          <div>
-            <label for="m_fullName">Nome e cognome</label>
-            <input id="m_fullName" required placeholder="Es. Angela G.">
-          </div>
-          <div>
-            <label for="m_email">Email</label>
-            <input id="m_email" type="email" required placeholder="nome@azienda.it">
-          </div>
-          <div>
-            <label for="m_password">Password</label>
-            <input id="m_password" type="password" required placeholder="••••••••">
-          </div>
-          <div>
-            <label for="m_department">Reparto</label>
-            <select id="m_department">
-              <option value="">Seleziona…</option>
+  <main class="wrap" id="app" hidden>
+
+    <!-- ====== REPARTO PERSONALE ====== -->
+    <div class="card" id="card-personale">
+      <h1>Personale</h1>
+      <p class="subtitle">Aggiungi nuovi dipendenti. Dopo la creazione potrai programmare i turni (anche automatici per mese/anno).</p>
+
+      <div class="grid2">
+        <!-- Form nuovo dipendente -->
+        <section>
+          <h3>Aggiungi dipendente</h3>
+          <div class="row" id="emp-form">
+            <input id="fullName" class="input" placeholder="Nome e cognome" style="flex:1 1 220px" autocomplete="name">
+            <input id="email" class="input" placeholder="Email" style="flex:1 1 220px" type="email" autocomplete="email">
+            <input id="password" class="input" placeholder="Password" style="flex:1 1 160px" type="password" autocomplete="new-password">
+            <select id="department" aria-label="Reparto">
+              <option value="">Reparto…</option>
               <option value="banco">Banco</option>
               <option value="laboratorio">Laboratorio</option>
             </select>
+            <input id="role" class="input" placeholder="Ruolo (es. Addetto banco)" style="flex:1 1 200px">
+            <button class="btn secondary" id="btnCreateEmp">+ Crea</button>
           </div>
-          <div style="grid-column:1 / -1">
-            <label for="m_role">Ruolo</label>
-            <input id="m_role" placeholder="Es. Addetto banco">
-          </div>
-        </div>
-        <div class="small" id="m_msg" style="margin-top:8px;min-height:1.2em"></div>
-        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
-          <button type="button" class="btn" id="m_cancel">Annulla</button>
-          <button class="btn primary" id="m_save" type="submit">Crea dipendente</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
+          <div class="small" id="emp-msg" style="margin-top:8px"></div>
+        </section>
 
         <!-- Lista dipendenti e ore mese -->
         <section>
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-            <h3 style="margin:0">Elenco dipendenti</h3>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
+            <h3 style="margin-right:auto">Elenco dipendenti</h3>
+            <span class="small">Mese corrente: <span class="pill" id="monthLabel"></span></span>
             <button class="btn" id="btnReloadEmp">Ricarica</button>
-            <span class="small" style="margin-left:auto">
-              Mese corrente: <span class="pill" id="monthLabel"></span>
-            </span>
           </div>
           <div class="table-wrap" style="border-radius:12px">
             <table class="table-mini" id="tblEmployees">
@@ -202,16 +155,20 @@
     <!-- ====== PROGRAMMAZIONE TURNI ====== -->
     <div class="card" style="margin-top:18px">
       <h1>Programmazione turni settimanale</h1>
-      <p class="subtitle">Il manager può modificare giorno/ora o impostare <b>OFF</b>. La colonna finale mostra il <b>totale ore</b> settimanali.</p>
+      <p class="subtitle">Modifica giorno/ora o imposta <b>OFF</b>. La colonna finale mostra il <b>totale ore</b> settimanali.</p>
 
       <div class="toolbar">
         <label class="switch"><input type="checkbox" id="managerMode" checked> Modalità manager</label>
-        <input type="date" id="weekStart"/>
+        <input type="date" id="weekStart" aria-label="Settimana di inizio"/>
         <button class="btn" id="prevW">◀ Settimana prec.</button>
         <button class="btn secondary" id="thisW">Questa settimana</button>
         <button class="btn" id="nextW">Settimana succ. ▶</button>
         <button class="btn" id="saveBtn" disabled>💾 Salva modifiche</button>
-        <span class="hint">Formato celle: <b>HH:MM-HH:MM</b> o <b>OFF</b>. Doppio clic per alternare OFF.</span>
+        <!-- Auto generator -->
+        <button class="btn" id="autoMonth">Auto mese</button>
+        <button class="btn" id="autoYear">Auto anno</button>
+
+        <span class="hint">Celle: <b>HH:MM-HH:MM</b> o <b>OFF</b>. Doppio clic per alternare.</span>
       </div>
 
       <div class="table-wrap">
@@ -225,7 +182,7 @@
           </thead>
           <tbody></tbody>
         </table>
-        <div id="skel" class="sk" style="padding:14px 12px;display:none">
+        <div id="skel" class="sk" style="display:none">
           <div class="bar" style="width:70%"></div>
           <div class="bar" style="width:55%"></div>
           <div class="bar" style="width:62%"></div>
@@ -249,43 +206,10 @@
     </div>
   </main>
 
-  <!-- FAB guardar móvil -->
-  <button id="saveFab" class="save-fab">💾 Salva modifiche</button>
-
-  <!-- Modal editor de celda -->
-  <div id="cellModal" class="modal" aria-hidden="true">
-    <div class="modal-content">
-      <div class="modal-header">
-        <strong>Modifica turno</strong>
-        <button class="btn" id="mClose">Chiudi</button>
-      </div>
-      <div class="modal-body">
-        <div class="switch-l">
-          <input type="checkbox" id="mOff"> <label for="mOff">Giornata OFF</label>
-        </div>
-        <div class="row">
-          <div style="flex:1">
-            <label for="mStart">Inizio</label>
-            <input type="time" id="mStart" value="09:00">
-          </div>
-          <div style="flex:1">
-            <label for="mEnd">Fine</label>
-            <input type="time" id="mEnd" value="18:00">
-          </div>
-        </div>
-        <small class="small">Suggerimento: i minuti di pausa si gestiscono nella pagina note ore (in arrivo).</small>
-      </div>
-      <div class="modal-footer">
-        <button class="btn" id="mClear">Imposta OFF</button>
-        <button class="btn secondary" id="mApply">Applica</button>
-      </div>
-    </div>
-  </div>
-
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-    // === Supabase ===
+    // === Supabase (Anon) ===
     const SUPABASE_URL = "https://tcfmeggqhxcnihkmnkqs.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjZm1lZ2dxaHhjbmloa21ua3FzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxOTAzMjUsImV4cCI6MjA3Mjc2NjMyNX0.VYkrvIVWti57W9UOnQcCvywmonWGyrtIT4KAzszbiFs";
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -326,20 +250,10 @@
     const statusText = document.getElementById('statusText');
     const managerMode = document.getElementById('managerMode');
     const saveBtn = document.getElementById('saveBtn');
-    const saveFab = document.getElementById('saveFab');
     const weekStartInp = document.getElementById('weekStart');
     const matesDaySel = document.getElementById('matesDay');
     const matesBanco = document.getElementById('mates-banco');
     const matesLab = document.getElementById('mates-lab');
-
-    // Modal editor refs
-    const cellModal = document.getElementById('cellModal');
-    const mClose = document.getElementById('mClose');
-    const mApply = document.getElementById('mApply');
-    const mClear = document.getElementById('mClear');
-    const mStart = document.getElementById('mStart');
-    const mEnd = document.getElementById('mEnd');
-    const mOff = document.getElementById('mOff');
 
     // ======== UTILS ========
     const toISO = d => d.toISOString().slice(0,10);
@@ -358,15 +272,13 @@
     const initials = name => (name||'').split(/\s+/).map(s=>s[0]).join('').slice(0,2).toUpperCase();
     const empCell = (name,role)=>`<div class="emp"><div class="avatar">${initials(name)}</div><div><div class="name">${name}</div><small>${role||''}</small></div></div>`;
 
-    const isMobile = () => window.matchMedia('(max-width: 820px)').matches;
-
     // ======== STATO ========
     let employees = [];
     let shifts = [];
     let weekStart = startOfWeek(new Date());
-    weekStartInp.value = toISO(weekStart);
     const edits = new Map(); // `${empId}-${idx}` -> "OFF" | "HH:MM-HH:MM"
     let rpcAvailable = true;
+    weekStartInp.value = toISO(weekStart);
 
     // ======== API ========
     async function getEmployees(){
@@ -387,7 +299,85 @@
       if (error) throw error; return data;
     }
 
-    // === Personale: crea dipendente via server ===
+    // --------- Plantillas de horario por reparto / día de semana ---------
+    // idx: 0=Lun ... 6=Dom
+    function planByDeptWeekday(department, idx){
+      const dep = (department||'').toLowerCase();
+
+      // LAB: Lun–Dom 08:30–15:30
+      if (dep === 'laboratorio') {
+        return ['08:30','15:30']; // tutti i giorni
+      }
+
+      // BANCO: Lun–Ven 15:15–23:45, Sab–Dom 11:00–19:30
+      if (idx <= 4) return ['15:15','23:45']; // L-V
+      return ['11:00','19:30'];               // S-D
+    }
+
+    // Helpers de rango
+    function monthEdges(d){
+      const from = new Date(d.getFullYear(), d.getMonth(), 1);
+      const to   = new Date(d.getFullYear(), d.getMonth()+1, 0);
+      return [from, to];
+    }
+    function yearEdges(y){
+      const from = new Date(y, 0, 1);
+      const to   = new Date(y, 11, 31);
+      return [from, to];
+    }
+    function* eachDay(from, to){
+      const d = new Date(from); d.setHours(0,0,0,0);
+      const end = new Date(to); end.setHours(0,0,0,0);
+      for(; d <= end; d.setDate(d.getDate()+1)) yield new Date(d);
+    }
+
+    // Construye items para RPC bulk en un rango para UN empleado
+    function buildBulkForEmployee(emp, fromDate, toDate){
+      const out = [];
+      for (const d of eachDay(fromDate, toDate)){
+        const idx = (d.getDay()+6)%7; // 0=Lun..6=Dom
+        const plan = planByDeptWeekday(emp.department, idx);
+        if (!plan) { out.push({ employee_id: emp.id, date: toISO(d), off: true }); continue; }
+        const [start, end] = plan;
+        out.push({
+          employee_id: emp.id,
+          date: toISO(d),
+          start_time: start,
+          end_time: end,
+          break_minutes: 0,
+          break_paid: false
+        });
+      }
+      return out;
+    }
+
+    // Asignación automática MES actual
+    async function autoAssignMonthFor(targetEmpId = null){
+      const now = new Date();
+      const [from, to] = monthEdges(now);
+      const list = targetEmpId
+        ? employees.filter(e => String(e.id) === String(targetEmpId))
+        : employees.filter(e => e.is_active);
+      if (!list.length) throw new Error('Nessun dipendente selezionato');
+      let items = [];
+      for (const emp of list){ items = items.concat(buildBulkForEmployee(emp, from, to)); }
+      await saveShiftsBulk(items);
+    }
+
+    // Asignación automática AÑO (del año de weekStart)
+    async function autoAssignYearFor(targetEmpId = null){
+      const year = weekStart.getFullYear();
+      const [from, to] = yearEdges(year);
+      const list = targetEmpId
+        ? employees.filter(e => String(e.id) === String(targetEmpId))
+        : employees.filter(e => e.is_active);
+      if (!list.length) throw new Error('Nessun dipendente selezionato');
+      let items = [];
+      for (const emp of list){ items = items.concat(buildBulkForEmployee(emp, from, to)); }
+      await saveShiftsBulk(items);
+    }
+
+    // === Personale: crea dipendente via server (richiede token di Supabase nel Bearer) ===
     async function createEmployee(){
       empMsg.textContent = '';
       const full_name = fullNameEl.value.trim();
@@ -396,7 +386,9 @@
       const role = roleEl.value.trim() || null;
       const department = departmentEl.value || null;
 
-      if(!full_name || !email || !password){ empMsg.style.color='#b00020'; empMsg.textContent='Compila nome, email e password.'; return; }
+      if(!full_name || !email || !password){
+        empMsg.style.color='#b00020'; empMsg.textContent='Compila nome, email e password.'; return;
+      }
 
       btnCreateEmp.disabled = true; const old=btnCreateEmp.textContent; btnCreateEmp.textContent='Creazione…';
       try{
@@ -409,12 +401,19 @@
           headers:{ 'Content-Type':'application/json', 'Authorization': 'Bearer ' + token },
           body: JSON.stringify({ fullName: full_name, email, password, role, department })
         });
-        const out = await res.text();
-        if(!res.ok){ throw new Error(out || 'Errore creazione dipendente'); }
+
+        const out = await res.json().catch(()=>null);
+        if(!res.ok){ throw new Error((out && (out.error||out.message)) || 'Errore creazione dipendente'); }
 
         empMsg.style.color='#0f9d58';
         empMsg.textContent='Dipendente creato correttamente!';
         fullNameEl.value=''; emailEl.value=''; passwordEl.value=''; roleEl.value=''; departmentEl.value='';
+
+        // ⚡ Opcional: auto-mese para el creado (si el backend devuelve employee_id)
+        if (out && out.user_id) {
+          await autoAssignMonthFor(out.employee_id || null);
+        }
+
         await loadEmployeesMonth();
       }catch(e){
         empMsg.style.color='#b00020';
@@ -438,8 +437,10 @@
 
       try{
         const list = await getEmployees();
+        // turni del mese per tutti
         const monthShifts = await getShifts(fromISO, toISOstr);
 
+        // mappa ore per dipendente
         const hoursByEmp = new Map();
         for(const s of monthShifts){
           if (s.off) continue;
@@ -454,6 +455,7 @@
           hoursByEmp.set(s.employee_id, (hoursByEmp.get(s.employee_id)||0) + h);
         }
 
+        // render
         empBody.innerHTML = '';
         for(const emp of list){
           const tr = document.createElement('tr');
@@ -509,24 +511,16 @@
           td.innerHTML = cell;
           if (cell==='OFF') td.classList.add('off');
 
-          // Desktop: editable inline; Mobile: modal editor
-          if (!isMobile()){
-            td.contentEditable = managerMode.checked ? 'true' : 'false';
-            td.addEventListener('dblclick', ()=>{
-              if(!managerMode.checked) return;
-              const cur = td.textContent.trim();
-              const v = /off/i.test(cur) ? '09:00-18:00' : 'OFF';
-              td.textContent = v;
-              td.classList.toggle('off', /off/i.test(v));
-              markEdited(td);
-            });
-            td.addEventListener('input', ()=> managerMode.checked && markEdited(td));
-          } else {
-            td.addEventListener('click', ()=>{
-              if(!managerMode.checked) return;
-              openCellEditor(td);
-            });
-          }
+          td.contentEditable = managerMode.checked ? 'true' : 'false';
+          td.addEventListener('dblclick', ()=>{
+            if(!managerMode.checked) return;
+            const cur = td.textContent.trim();
+            const v = /off/i.test(cur) ? '09:00-18:00' : 'OFF';
+            td.textContent = v;
+            td.classList.toggle('off', /off/i.test(v));
+            markEdited(td);
+          });
+          td.addEventListener('input', ()=> managerMode.checked && markEdited(td));
 
           tr.appendChild(td);
         });
@@ -545,8 +539,7 @@
       const idx = td.dataset.dayIdx;
       const val = td.textContent.trim();
       edits.set(`${empId}-${idx}`, val);
-      td.classList.add('edited');
-      toggleSaveButtons(true);
+      td.classList.add('edited'); saveBtn.disabled = false;
       recalcRow(td.closest('tr'));
     }
 
@@ -594,7 +587,7 @@
       });
 
       try{
-        disableSaves(true, 'Salvataggio…');
+        saveBtn.disabled = true; saveBtn.textContent = 'Salvataggio…';
         statusRow.classList.remove('error'); statusText.textContent = 'Salvataggio in corso…';
         await saveShiftsBulk(payload);
         edits.clear();
@@ -610,73 +603,10 @@
         statusText.textContent = 'Errore salvataggio';
         alert('Errore nel salvataggio: ' + (err.message || err));
       }finally{
-        disableSaves(false, '💾 Salva modifiche');
-        toggleSaveButtons(false);
+        saveBtn.textContent = '💾 Salva modifiche';
+        saveBtn.disabled = edits.size===0;
       }
     }
-
-    function disableSaves(disabled, text){
-      saveBtn.disabled = disabled;
-      if(text) saveBtn.textContent = text;
-      saveFab.disabled = disabled;
-      if(text) saveFab.textContent = text;
-    }
-    function toggleSaveButtons(show){
-      saveBtn.disabled = !show && edits.size===0;
-      if(isMobile()){
-        saveFab.style.display = (show || edits.size>0) ? 'flex' : 'none';
-      }
-    }
-
-    // ===== Modal editor (móvil + desktop opcional) =====
-    let editingTD = null;
-    function openCellEditor(td){
-      editingTD = td;
-      const cur = (td.textContent||'').trim();
-      if (/off/i.test(cur) || !cur){
-        mOff.checked = true;
-        mStart.value = '09:00';
-        mEnd.value = '18:00';
-      } else {
-        mOff.checked = false;
-        const m = cur.match(/(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})/);
-        mStart.value = m ? `${m[1].padStart(2,'0')}:${m[2]}` : '09:00';
-        mEnd.value   = m ? `${m[3].padStart(2,'0')}:${m[4]}` : '18:00';
-      }
-      cellModal.classList.add('open');
-      cellModal.setAttribute('aria-hidden','false');
-    }
-    function closeCellEditor(){
-      cellModal.classList.remove('open');
-      cellModal.setAttribute('aria-hidden','true');
-      editingTD = null;
-    }
-    mClose.addEventListener('click', closeCellEditor);
-    mClear.addEventListener('click', ()=>{
-      if(!editingTD) return;
-      editingTD.textContent = 'OFF';
-      editingTD.classList.add('off');
-      markEdited(editingTD);
-      closeCellEditor();
-    });
-    mApply.addEventListener('click', ()=>{
-      if(!editingTD) return;
-      const off = mOff.checked;
-      if (off){
-        editingTD.textContent = 'OFF';
-        editingTD.classList.add('off');
-      } else {
-        const s = (mStart.value||'09:00').slice(0,5);
-        const e = (mEnd.value||'18:00').slice(0,5);
-        editingTD.textContent = `${s}-${e}`;
-        editingTD.classList.toggle('off', false);
-      }
-      markEdited(editingTD);
-      closeCellEditor();
-    });
-    cellModal.addEventListener('click', (e)=>{
-      if(e.target === cellModal) closeCellEditor();
-    });
 
     // ======== EVENTI ========
     document.getElementById('prevW').addEventListener('click', async ()=>{
@@ -696,15 +626,38 @@
       await reloadWeek();
     });
     managerMode.addEventListener('change', ()=>{
-      // En desktop reactivar contentEditable; en móvil seguimos con modal
       [...tbody.querySelectorAll('td[data-day-idx]')].forEach(td=>{
-        td.contentEditable = (!isMobile() && managerMode.checked) ? 'true' : 'false';
+        td.contentEditable = managerMode.checked ? 'true' : 'false';
       });
     });
+    document.getElementById('autoMonth').addEventListener('click', async ()=>{
+      try{
+        const choice = prompt('ID dipendente (vuoto = tutti gli attivi):','');
+        if (!confirm('Generare turni automatici per il mese corrente?')) return;
+        await autoAssignMonthFor(choice?.trim() || null);
+        const fromISO = toISO(weekStart);
+        const toISOstr = toISO(addDays(weekStart, 6));
+        shifts = await getShifts(fromISO, toISOstr);
+        renderWeek(); renderMates();
+        await loadEmployeesMonth();
+        alert('Turni del mese generati.');
+      }catch(e){ alert('Errore Auto mese: ' + (e.message||e)); }
+    });
+    document.getElementById('autoYear').addEventListener('click', async ()=>{
+      try{
+        const choice = prompt('ID dipendente (vuoto = tutti gli attivi):','');
+        if (!confirm(`Generare turni automatici per l'anno ${weekStart.getFullYear()}?`)) return;
+        await autoAssignYearFor(choice?.trim() || null);
+        const fromISO = toISO(weekStart);
+        const toISOstr = toISO(addDays(weekStart, 6));
+        shifts = await getShifts(fromISO, toISOstr);
+        renderWeek(); renderMates();
+        await loadEmployeesMonth();
+        alert('Turni dell’anno generati.');
+      }catch(e){ alert('Errore Auto anno: ' + (e.message||e)); }
+    });
     saveBtn.addEventListener('click', saveChanges);
-    saveFab.addEventListener('click', saveChanges);
     matesDaySel.addEventListener('change', renderMates);
-
     btnCreateEmp.addEventListener('click', createEmployee);
     btnReloadEmp.addEventListener('click', loadEmployeesMonth);
 
@@ -728,7 +681,7 @@
       app.hidden = false;
       skel.style.display = 'block';
 
-      // RPC avail
+      // Probar disponibilidad de RPC
       try {
         await supabase.rpc('upsert_shifts_bulk', { payload: { items: [] } });
         rpcAvailable = true;
@@ -752,10 +705,6 @@
       }finally{
         skel.style.display = 'none';
       }
-
-      // estado inicial botón móvil
-      toggleSaveButtons(false);
-      window.addEventListener('resize', ()=>toggleSaveButtons(edits.size>0));
     })();
   </script>
 </body>
