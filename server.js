@@ -59,6 +59,79 @@ app.get('/debug-env', (req, res) => {
   });
 });
 
+// ===== Modal helpers (Nuevo dipendente) =====
+const empModal = document.getElementById('empModal');
+const openEmpBtn = document.getElementById('btnOpenEmp');
+const closeEmpBtn = document.getElementById('btnCloseEmp');
+const empForm = document.getElementById('empForm');
+
+const m_fullName = document.getElementById('m_fullName');
+const m_email = document.getElementById('m_email');
+const m_password = document.getElementById('m_password');
+const m_department = document.getElementById('m_department');
+const m_role = document.getElementById('m_role');
+const m_msg = document.getElementById('m_msg');
+const m_cancel = document.getElementById('m_cancel');
+const m_save = document.getElementById('m_save');
+
+function toggleEmpModal(show){
+  empModal.classList[show ? 'add':'remove']('open');
+  empModal.setAttribute('aria-hidden', show ? 'false':'true');
+  if (show) { m_msg.textContent=''; empForm.reset(); setTimeout(()=>m_fullName.focus(), 50); }
+}
+
+// Abrir/cerrar
+openEmpBtn?.addEventListener('click', ()=> toggleEmpModal(true));
+closeEmpBtn?.addEventListener('click', ()=> toggleEmpModal(false));
+m_cancel?.addEventListener('click', ()=> toggleEmpModal(false));
+empModal?.addEventListener('click', (e)=>{ if(e.target===empModal) toggleEmpModal(false); });
+
+// Crear vía endpoint seguro del server (usa Service Role en el server)
+empForm?.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  m_msg.style.color = '#475569';
+  m_msg.textContent = 'Creazione in corso…';
+
+  const fullName = m_fullName.value.trim();
+  const email = m_email.value.trim();
+  const password = m_password.value;
+  const department = m_department.value || null;
+  const role = (m_role.value || '').trim() || null;
+
+  if(!fullName || !email || !password){
+    m_msg.style.color = '#b00020';
+    m_msg.textContent = 'Compila nome, email e password.';
+    return;
+  }
+
+  try{
+    const { data:{ session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if(!token){ location.href='/login.html'; return; }
+
+    m_save.disabled = true;
+    const res = await fetch('/api/admin/create-employee', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ fullName, email, password, department, role })
+    });
+    const text = await res.text();
+    if(!res.ok) throw new Error(text || 'Errore creazione dipendente');
+
+    m_msg.style.color = '#0f9d58';
+    m_msg.textContent = 'Dipendente creato!';
+    // refresca la lista y cierra
+    await loadEmployeesMonth();
+    toggleEmpModal(false);
+  }catch(err){
+    console.error(err);
+    m_msg.style.color = '#b00020';
+    m_msg.textContent = err.message || String(err);
+  }finally{
+    m_save.disabled = false;
+  }
+});
+
 // ==== Auth helpers ====
 // Lee access token de Supabase y retorna user + profile (o lanza)
 async function getAuthContext(req) {
