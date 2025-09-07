@@ -127,31 +127,50 @@
   </header>
 
   <!-- app hidden finché non validiamo il ruolo -->
-  <main class="wrap" id="app" hidden>
-
-    <!-- ====== REPARTO PERSONALE ====== -->
-    <div class="card" id="card-personale">
-      <h1>Personale</h1>
-      <p class="subtitle">Aggiungi nuovi dipendenti. Dopo la creazione potrai programmare i turni settimanali.</p>
-
-      <div class="grid2">
-        <!-- Form nuovo dipendente -->
-        <section>
-          <h3 style="margin:0 0 10px">Aggiungi dipendente</h3>
-          <div class="row" id="emp-form">
-            <input id="fullName" class="input" placeholder="Nome e cognome" style="flex:1 1 220px">
-            <input id="email" class="input" placeholder="Email" style="flex:1 1 220px" type="email">
-            <input id="password" class="input" placeholder="Password" style="flex:1 1 160px" type="password">
-            <select id="department">
-              <option value="">Reparto…</option>
+ <!-- MODAL: NUEVO DIPENDENTE -->
+<div id="empModal" class="modal" aria-hidden="true">
+  <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="empModalTitle">
+    <div class="modal-header">
+      <strong id="empModalTitle">Nuovo dipendente</strong>
+      <button class="btn" id="btnCloseEmp">Chiudi</button>
+    </div>
+    <div class="modal-body">
+      <form id="empForm">
+        <div class="two-col">
+          <div>
+            <label for="m_fullName">Nome e cognome</label>
+            <input id="m_fullName" required placeholder="Es. Angela G.">
+          </div>
+          <div>
+            <label for="m_email">Email</label>
+            <input id="m_email" type="email" required placeholder="nome@azienda.it">
+          </div>
+          <div>
+            <label for="m_password">Password</label>
+            <input id="m_password" type="password" required placeholder="••••••••">
+          </div>
+          <div>
+            <label for="m_department">Reparto</label>
+            <select id="m_department">
+              <option value="">Seleziona…</option>
               <option value="banco">Banco</option>
               <option value="laboratorio">Laboratorio</option>
             </select>
-            <input id="role" class="input" placeholder="Ruolo (es. Addetto banco)" style="flex:1 1 200px">
-            <button class="btn secondary" id="btnCreateEmp">+ Crea</button>
           </div>
-          <div class="small" id="emp-msg" style="margin-top:8px"></div>
-        </section>
+          <div style="grid-column:1 / -1">
+            <label for="m_role">Ruolo</label>
+            <input id="m_role" placeholder="Es. Addetto banco">
+          </div>
+        </div>
+        <div class="small" id="m_msg" style="margin-top:8px;min-height:1.2em"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+          <button type="button" class="btn" id="m_cancel">Annulla</button>
+          <button class="btn primary" id="m_save" type="submit">Crea dipendente</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
         <!-- Lista dipendenti e ore mese -->
         <section>
