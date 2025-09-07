@@ -35,7 +35,7 @@
     .switch{display:inline-flex;align-items:center;gap:8px}
     .hint{color:var(--muted);font-size:12px;margin-left:auto}
 
-    /* Tabla turnos */
+    /* Tablas */
     .table-wrap{margin-top:14px;border-radius:14px;overflow:auto;border:1px solid var(--border)}
     table{border-collapse:separate;border-spacing:0;width:100%;min-width:980px}
     thead th{position:sticky;top:0;z-index:2;background:var(--primary-600);color:white;font-weight:600;font-size:14px;padding:12px;text-align:left}
@@ -76,30 +76,28 @@
     .table-mini th, .table-mini td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:14px}
     .badge{display:inline-block;background:#f8fafc;border:1px solid var(--border);border-radius:999px;padding:2px 8px;font-size:12px}
 
-    /* Bottom sheet (Add Employee) */
-    .sheet{position:fixed;inset:0;display:none;background:rgba(2,6,23,.4);z-index:999}
-    .sheet.open{display:block}
-    .sheet .panel{
-      position:absolute;left:0;right:0;bottom:0;background:#fff;border-top-left-radius:20px;border-top-right-radius:20px;
-      box-shadow:0 -10px 30px rgba(2,6,23,.15);padding:16px 16px 20px;max-height:90vh;overflow:auto
-    }
-    .sheet .grab{width:44px;height:5px;border-radius:999px;background:#e5e7eb;margin:6px auto 10px}
-    .sheet h3{margin:4px 0 10px}
-    .seg{display:flex;border:1px solid var(--border);border-radius:999px;overflow:hidden}
-    .seg button{flex:1;padding:10px 12px;background:#fff;border:0}
-    .seg button.active{background:#111827;color:#fff}
-    .field{display:grid;gap:6px;margin:10px 0}
-    .field label{font-size:13px;color:#475569}
-    .field input, .field select{padding:12px 14px;border:1px solid var(--border);border-radius:12px;font-size:16px}
-    .inline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .muted{color:#6b7280;font-size:12px}
-    .err{color:var(--danger);font-size:13px;min-height:1.2em}
-    .ok{color:var(--ok);font-size:13px;min-height:1.2em}
-
     /* FAB mobile */
     .fab{position:fixed;right:16px;bottom:16px;background:var(--primary);color:#fff;border:0;border-radius:999px;
-      padding:14px 16px;font-weight:700;box-shadow:0 10px 20px rgba(238,117,35,.35);z-index:998}
+      padding:14px 16px;font-weight:700;box-shadow:0 10px 20px rgba(238,117,35,.35);z-index:900}
     .fab span{font-size:20px;line-height:0;vertical-align:middle;margin-right:6px}
+
+    /* MODAL centrado (Aggiungi dipendente) */
+    .modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(2,6,23,.45);z-index:1001}
+    .modal.open{display:grid}
+    .modal .modal-panel{
+      width:min(560px,92vw);max-height:90vh;overflow:auto;
+      background:#fff;border-radius:20px;padding:16px 16px 20px;
+      box-shadow:0 20px 60px rgba(2,6,23,.25)
+    }
+
+    /* Drawer detalle empleado (derecha) */
+    .drawer{position:fixed;inset:0;display:none;background:rgba(2,6,23,.40);z-index:1000}
+    .drawer.open{display:block}
+    .drawer .panel{
+      position:absolute;right:0;top:0;bottom:0;width:min(440px,100%);
+      background:#fff;border-top-left-radius:20px;border-bottom-left-radius:20px;
+      box-shadow:-10px 0 30px rgba(2,6,23,.18);padding:16px 16px 20px;overflow:auto
+    }
 
     /* Responsive tweaks */
     @media (max-width:720px){
@@ -109,33 +107,7 @@
       .table-wrap{border-radius:12px}
       .card{border-radius:18px}
       .row .input, .row select{flex:1 1 150px}
-      /* Evita sticky header dentro de overflow en móvil (iOS glitch) */
-      thead th{ position:static; }
     }
-
-    /* Suaviza scroll en iOS y evita repintados costosos */
-    .table-wrap{ -webkit-overflow-scrolling: touch; contain: paint; }
-
-    /* Sheet de detalle (empDetail) */
-    .sheet2{position:fixed;inset:0;display:none;background:rgba(2,6,23,.45);z-index:1000}
-    .sheet2.open{display:block}
-    .sheet2 .panel{
-      position:absolute;left:0;right:0;bottom:0;background:#fff;
-      border-top-left-radius:20px;border-top-right-radius:20px;
-      box-shadow:0 -10px 30px rgba(2,6,23,.15);
-      max-height:90vh;padding:16px;overflow:auto
-    }
-    .sheet2 .head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-    .sheet2 .head .title{font-weight:700;font-size:18px;margin-left:auto}
-    .sheet2 .body .item{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
-    .sheet2 .body .item:last-child{border-bottom:none}
-    .sheet2 .body .when{color:#475569;font-size:14px}
-
-    /* Resaltado temporal al volver a la tabla */
-    #tblEmployees tbody tr.hl{outline:2px solid #f59e0b; outline-offset:-2px}
-
-    /* Bloqueo de scroll del body cuando un sheet está abierto */
-    body.no-scroll{ overflow:hidden; position:fixed; inset:0; width:100%; }
   </style>
 </head>
 
@@ -164,7 +136,7 @@
     <div class="card" id="card-personale">
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <h1 style="margin-right:auto">Personale</h1>
-        <button class="btn secondary" id="openSheet">+ Crea</button>
+        <button class="btn secondary" id="openSheet">+ Aggiungi dipendente</button>
       </div>
       <p class="subtitle">Aggiungi dipendenti. Dopo la creazione puoi programmare turni (anche automatici per mese/anno).</p>
 
@@ -246,17 +218,17 @@
     </div>
   </main>
 
-  <!-- ====== DETALLE EMPLEADO (sheet) ====== -->
-  <div class="sheet2" id="empDetail">
+  <!-- ===== Drawer Detalle Empleado ===== -->
+  <div class="drawer" id="empDetail">
     <div class="panel">
-      <div class="head">
+      <div class="head" style="display:flex;align-items:center;gap:10px">
         <button class="btn ghost" id="closeEmpDetail" type="button">Chiudi</button>
-        <div class="title" id="empDetailTitle">Dettagli</div>
+        <div class="title" id="empDetailTitle" style="margin-left:auto">Dettagli</div>
       </div>
       <div class="body">
-        <div class="row" style="gap:12px;margin-bottom:10px">
+        <div class="row" style="gap:12px;margin-bottom:10px;align-items:center">
           <div class="avatar" id="empDetailAvatar" style="--s:42px"></div>
-          <div class="meta">
+          <div class="meta" style="line-height:1.2">
             <div class="v" id="empDetailName">—</div>
             <div class="k"><span id="empDetailRole">—</span> · <span class="badge" id="empDetailDep">—</span></div>
           </div>
@@ -266,7 +238,7 @@
           </div>
         </div>
 
-        <div class="actions">
+        <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
           <button class="btn secondary" id="btnAutoMonthEmp">Auto mese</button>
           <button class="btn" id="btnAutoYearEmp">Auto anno</button>
           <button class="btn" id="btnGotoTable">Vai alla tabella</button>
@@ -278,13 +250,12 @@
     </div>
   </div>
 
-  <!-- Bottom-sheet Add Employee -->
-  <div class="sheet" id="sheet">
-    <div class="panel">
-      <div class="grab" role="presentation"></div>
+  <!-- ===== MODAL: Aggiungi dipendente ===== -->
+  <div class="modal" id="addEmpModal">
+    <div class="modal-panel">
       <div style="display:flex;align-items:center;gap:10px">
-        <h3 style="margin-right:auto">Nuovo dipendente</h3>
-        <button class="btn ghost" id="closeSheet">Chiudi</button>
+        <h3 style="margin-right:auto">Aggiungi dipendente</h3>
+        <button class="btn ghost" id="closeAddEmp" type="button">Chiudi</button>
       </div>
 
       <div class="field">
@@ -359,11 +330,11 @@
     // ======== REFS ========
     const app = document.getElementById('app');
 
-    // Sheet (mobile add)
-    const sheet = document.getElementById('sheet');
+    // Modal Add Employee
+    const addEmpModal = document.getElementById('addEmpModal');
     const openSheetBtn = document.getElementById('openSheet');
-    const closeSheetBtn = document.getElementById('closeSheet');
     const fabAdd = document.getElementById('fabAdd');
+    const closeAddEmpBtn = document.getElementById('closeAddEmp');
 
     // Personale
     const fullNameEl = document.getElementById('fullName');
@@ -411,10 +382,6 @@
     }
     const initials = name => (name||'').split(/\s+/).map(s=>s[0]).join('').slice(0,2).toUpperCase();
     const empCell = (name,role)=>`<div class="emp"><div class="avatar">${initials(name)}</div><div><div class="name">${name}</div><small>${role||''}</small></div></div>`;
-
-    // ======== BODY SCROLL LOCK ========
-    function lockBody(){ document.body.classList.add('no-scroll'); }
-    function unlockBody(){ document.body.classList.remove('no-scroll'); }
 
     // ======== STATO ========
     let employees = [];
@@ -476,15 +443,16 @@
       await saveShiftsBulk(items);
     }
 
-    // ======== SHEET logic ========
-    function openSheet(){ sheet.classList.add('open'); lockBody(); setTimeout(()=>fullNameEl.focus(), 0); }
-    function closeSheet(){ sheet.classList.remove('open'); unlockBody(); }
-    openSheetBtn.addEventListener('click', openSheet);
-    fabAdd.addEventListener('click', openSheet);
-    closeSheetBtn.addEventListener('click', closeSheet);
-    sheet.addEventListener('click', (e)=>{ if(e.target===sheet) closeSheet(); });
+    // ======== MODAL logic ========
+    function openAddModal(){ addEmpModal.classList.add('open'); setTimeout(()=>fullNameEl.focus(), 0); }
+    function closeAddModal(){ addEmpModal.classList.remove('open'); }
+    openSheetBtn?.addEventListener('click', openAddModal);
+    fabAdd?.addEventListener('click', openAddModal);
+    closeAddEmpBtn?.addEventListener('click', closeAddModal);
+    addEmpModal.addEventListener('click', (e)=>{ if(e.target===addEmpModal) closeAddModal(); });
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && addEmpModal.classList.contains('open')) closeAddModal(); });
 
-    // reparto segment
+    // reparto segment (modal)
     document.querySelectorAll('.seg button').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         document.querySelectorAll('.seg button').forEach(b=>b.classList.remove('active'));
@@ -535,62 +503,59 @@
           if (autoY.checked) await autoAssignYearFor(null);
         }
 
+        // limpia campos
         fullNameEl.value=''; emailEl.value=''; passwordEl.value=''; roleEl.value='';
         document.querySelectorAll('.seg button').forEach(b=>b.classList.remove('active'));
         document.querySelector('.seg button[data-dep="banco"]').classList.add('active');
         departmentHidden.value='banco';
 
         await loadEmployeesMonth();
-        setTimeout(closeSheet, 500);
+        setTimeout(closeAddModal, 500);
       }catch(e){
         empErr.textContent = e.message || e;
       }finally{
         btnCreateEmp.disabled=false; btnCreateEmp.textContent=old;
       }
     }
+    btnCreateEmp.addEventListener('click', createEmployee);
 
     // === Personale: lista + ore mese corrente ===
-    function monthLabelText(d) {
-      return new Intl.DateTimeFormat('it-IT', { month: 'long', year: 'numeric' }).format(d);
-    }
+    function monthLabelText(d){ return new Intl.DateTimeFormat('it-IT',{ month:'long', year:'numeric' }).format(d); }
 
-    async function loadEmployeesMonth() {
+    async function loadEmployeesMonth(){
       empBody.innerHTML = `<tr><td colspan="5" class="small">Caricamento…</td></tr>`;
       const now = new Date();
       monthLabel.textContent = monthLabelText(now);
       const [fromISO, toISOstr] = monthRange(now);
 
-      try {
+      try{
         const list = await getEmployees();
         const monthShifts = await getShifts(fromISO, toISOstr);
 
         const hoursByEmp = new Map();
-        for (const s of monthShifts) {
+        for(const s of monthShifts){
           if (s.off) continue;
-          const start = s.start_time?.slice(0, 5);
-          const end   = s.end_time?.slice(0, 5);
-          if (!start || !end) continue;
-
+          const start = s.start_time?.slice(0,5);
+          const end   = s.end_time?.slice(0,5);
+          if(!start || !end) continue;
           let h = parseHours(`${start}-${end}`);
           const paid = (typeof s.break_paid === 'boolean') ? s.break_paid : false;
-          const brk  = Number(s.break_minutes || 0);
-          if (!paid) h -= brk / 60;
-          if (h < 0) h = 0;
-
-          hoursByEmp.set(s.employee_id, (hoursByEmp.get(s.employee_id) || 0) + h);
+          const brk = Number(s.break_minutes||0);
+          if (!paid) h -= brk/60;
+          if (h<0) h=0;
+          hoursByEmp.set(s.employee_id, (hoursByEmp.get(s.employee_id)||0) + h);
         }
 
         empBody.innerHTML = '';
-        for (const emp of list) {
+        for(const emp of list){
           const tr = document.createElement('tr');
           tr.setAttribute('data-id', emp.id);
-          tr.style.cursor = 'pointer';
+          tr.style.cursor='pointer';
 
-          const rep   = emp.department ? `<span class="badge">${emp.department}</span>` : '—';
-          const role  = emp.role || '—';
+          const rep = emp.department ? `<span class="badge">${emp.department}</span>` : '—';
+          const role = emp.role || '—';
           const stato = emp.is_active ? '<span class="badge">attivo</span>' : '<span class="badge">non attivo</span>';
-          const ore   = Math.round(hoursByEmp.get(emp.id) || 0);
-
+          const ore = Math.round(hoursByEmp.get(emp.id)||0);
           tr.innerHTML = `
             <td>${emp.name}</td>
             <td>${rep}</td>
@@ -598,16 +563,15 @@
             <td>${stato}</td>
             <td class="right">${ore}</td>
           `;
-
-          tr.addEventListener('click', () => openEmployeeDetail(emp.id));
+          tr.addEventListener('click', ()=> openEmployeeDetail(emp.id));
           empBody.appendChild(tr);
         }
 
-        if (!empBody.children.length) {
+        if(!empBody.children.length){
           empBody.innerHTML = `<tr><td colspan="5" class="small">Nessun dipendente.</td></tr>`;
         }
-      } catch (e) {
-        empBody.innerHTML = `<tr><td colspan="5" class="small" style="color:#b00020">Errore: ${e.message || e}</td></tr>`;
+      }catch(e){
+        empBody.innerHTML = `<tr><td colspan="5" class="small" style="color:#b00020">Errore: ${e.message||e}</td></tr>`;
       }
     }
 
@@ -786,10 +750,8 @@
         alert('Turni dell’anno generati.');
       }catch(e){ alert('Errore Auto anno: ' + (e.message||e)); }
     });
-    btnCreateEmp.addEventListener('click', createEmployee);
+    saveBtn.addEventListener('click', saveChanges);
     btnReloadEmp.addEventListener('click', loadEmployeesMonth);
-    saveBtn.addEventListener('click', saveChanges);     // <-- añadido
-    matesDaySel.addEventListener('change', renderMates); // <-- añadido
 
     async function reloadWeek(){
       try{
@@ -802,36 +764,6 @@
         skel.style.display = 'none';
       }
     }
-
-    // ======== INIT ========
-    (async function init(){
-      const ok = await ensureManager();
-      if(!ok) return;
-
-      app.hidden = false;
-
-      try{
-        await supabase.rpc('upsert_shifts_bulk', { payload: { items: [] } });
-        rpcAvailable = true;
-      } catch {
-        rpcAvailable = false;
-        saveBtn.style.display = 'none';
-        statusRow.classList.add('error');
-        statusText.textContent = 'Funzione bulk non disponibile';
-      }
-
-      try{
-        employees = await getEmployees();
-        await reloadWeek();
-        await loadEmployeesMonth();
-        statusText.textContent = 'Pronto';
-      }catch(err){
-        console.error(err);
-        statusRow.classList.add('error');
-        statusText.textContent = 'Errore caricamento';
-        alert('Errore caricando dati da Supabase: ' + (err.message || err));
-      }
-    })();
 
     // ====== DETALLE EMPLEADO ======
     let currentEmpId = null;
@@ -877,7 +809,6 @@
 
     function closeEmployeeDetail(){
       document.getElementById('empDetail').classList.remove('open');
-      unlockBody();
     }
     document.getElementById('closeEmpDetail').addEventListener('click', closeEmployeeDetail);
     document.getElementById('empDetail').addEventListener('click', (e)=>{
@@ -932,14 +863,13 @@
 
       renderDetailList();
       document.getElementById('empDetail').classList.add('open');
-      lockBody();
     }
 
-    // --- Hook a la tabla para abrir detalle por fila ---
+    // Hook post-carga para cachear horas y click en filas
     const _loadEmployeesMonth = loadEmployeesMonth;
     loadEmployeesMonth = async function(){
       await _loadEmployeesMonth();
-
+      // cache horas
       empHoursCache = new Map();
       [...document.querySelectorAll('#tblEmployees tbody tr')].forEach(tr=>{
         const id = tr.getAttribute('data-id');
@@ -949,7 +879,7 @@
           empHoursCache.set(Number(id), ore);
         }
       });
-
+      // listeners (si faltaran)
       document.querySelectorAll('#tblEmployees tbody tr').forEach(tr=>{
         const id = tr.getAttribute('data-id');
         if(!id) return;
@@ -957,6 +887,37 @@
         tr.addEventListener('click', ()=> openEmployeeDetail(id));
       });
     };
+
+    // ======== INIT ========
+    async function init(){
+      const ok = await ensureManager();
+      if(!ok) return;
+
+      app.hidden = false;
+
+      try{
+        await supabase.rpc('upsert_shifts_bulk', { payload: { items: [] } });
+        rpcAvailable = true;
+      } catch {
+        rpcAvailable = false;
+        saveBtn.style.display = 'none';
+        statusRow.classList.add('error');
+        statusText.textContent = 'Funzione bulk non disponibile';
+      }
+
+      try{
+        employees = await getEmployees();
+        await reloadWeek();
+        await loadEmployeesMonth();
+        statusText.textContent = 'Pronto';
+      }catch(err){
+        console.error(err);
+        statusRow.classList.add('error');
+        statusText.textContent = 'Errore caricamento';
+        alert('Errore caricando dati da Supabase: ' + (err.message || err));
+      }
+    }
+    init();
   </script>
 </body>
 </html>
