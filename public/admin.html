@@ -1,348 +1,59 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>CREMA – Admin Prodotti</title>
-  <link rel="stylesheet" href="/styles.css"/>
-  <link rel="icon" type="image/svg+xml" href="https://gelatocrema.com/cdn/shop/files/logo_color.svg?v=1693061670&width=100">
-  <link rel="alternate icon" href="/favicon.ico">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Turni CREMA</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@unocss/reset/tailwind.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+    window.supabase = createClient(
+      'https://tcfmeggqhxcnihkmnkqs.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjZm1lZ2dxaHhjbmloa21ua3FzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxOTAzMjUsImV4cCI6MjA3Mjc2NjMyNX0.VYkrvIVWti57W9UOnQcCvywmonWGyrtIT4KAzszbiFs'
+    )
+  </script>
   <style>
-    :root{ --muted:#667085; --border:rgba(0,0,0,.12); }
-    body.admin { background: var(--background-1, #fffce3); }
-    .admin-main .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
-    .card .actions { display:flex; gap:8px; margin-top:10px; }
-    .form-row { display:flex; flex-wrap:wrap; gap:10px; }
-
-    /* Modal base */
-    .modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.35); padding:16px; z-index:999; }
-    .modal.open { display:flex; }
-    .modal-content { width:100%; max-width:720px; background:#fff; border-radius:12px; overflow:hidden; }
-    .modal-header { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid rgba(0,0,0,.08); }
-    .modal-body { padding:16px; }
-    .modal-body form label { display:block; font-weight:600; font-size:.95rem; color:#444; }
-    .modal-body form input,
-    .modal-body form textarea,
-    .modal-body form select { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; }
-    .modal-body form textarea { resize:vertical; }
-    .two-col { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    @media (max-width: 640px){ .two-col { grid-template-columns:1fr; } }
-
-    /* Empty / skeleton */
-    .empty { color:var(--muted); text-align:center; padding:28px 12px; border:1px dashed var(--border); border-radius:12px; }
-    .skeleton { background:linear-gradient(90deg,#eee,#f6f6f6,#eee); background-size:200% 100%; animation:s 1.2s infinite; border-radius:10px; }
-    @keyframes s { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-    .sk-card { padding:12px; border-radius:12px; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,.06); display:grid; gap:8px; }
-    .sk-img { height:160px; }
-
-    /* Inputs */
-    #search { max-width:320px; padding:10px 12px; border:1px solid var(--border); border-radius:8px; }
-    .btn.primary[disabled], .btn[disabled] { opacity:.65; cursor:not-allowed; }
+    :root {
+      --bg: #fffce3;
+      --card: #ffffff;
+      --primary: #ee7523;
+      --navy: #6a3f24;
+    }
+    body {
+      background-color: var(--bg);
+    }
+    .shadow-card {
+      box-shadow: 0 10px 30px rgba(2,6,23,0.08);
+    }
+    .shift-cell {
+      @apply text-center py-2 px-1 text-sm font-medium border border-gray-200 whitespace-nowrap;
+    }
+    .shift-row {
+      @apply grid grid-cols-9 items-center;
+    }
+    .shift-header {
+      @apply bg-orange-600 text-white font-semibold;
+    }
+    .shift-off {
+      @apply bg-orange-50 text-gray-400;
+    }
+    .shift-name {
+      @apply flex items-center gap-2 px-2;
+    }
+    .shift-name .initials {
+      @apply w-8 h-8 rounded-full bg-orange-400 text-white font-bold grid place-items-center flex-shrink-0;
+    }
+    @media (max-width: 768px) {
+      .shift-row {
+        grid-template-columns: 140px repeat(7, 1fr) 60px;
+      }
+    }
   </style>
 </head>
-<body class="admin">
-<header class="nav">
-  <div class="nav-inner container">
-    <a href="/" class="brand" title="Area Admin">
-      <img src="https://gelatocrema.com/cdn/shop/files/logo_color.svg?v=1693061670&width=100" alt="CREMA" style="height:40px;width:auto">
-    </a>
-    <div style="margin-left:auto;display:flex;gap:10px">
-      <button class="btn" onclick="location.href='/index.html'">Sito</button>
-      <button class="btn" onclick="location.href='/admin-shifts.html'">Turni</button>
-      <button class="btn" onclick="location.href='/employee.html'">Area dipendente</button>
-      <button class="btn primary" onclick="logout()">Logout</button>
-    </div>
-  </div>
-</header>
-
-<main class="container admin-main" id="app" hidden>
-  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0 16px">
-    <h1 class="cormorant" style="margin:0">Gestione Prodotti</h1>
-    <button class="btn primary" id="btnNew">+ Nuovo</button>
-    <input id="search" placeholder="Cerca per nome o categoria..." style="margin-left:auto">
-  </div>
-
-  <!-- Lista prodotti -->
-  <section id="plist" class="grid" aria-live="polite"></section>
-  <div id="empty" class="empty" style="display:none">Nessun prodotto. Crea il primo con “+ Nuovo”.</div>
-  <div id="err" class="empty" style="display:none; color:#b00020; border-color:#f2b8b5">Si è verificato un errore. Riprova.</div>
-</main>
-
-<!-- Modal CREAZIONE / MODIFICA -->
-<div id="productModal" class="modal" aria-hidden="true">
-  <div class="modal-content">
-    <div class="modal-header">
-      <strong id="pm-title">Nuovo prodotto</strong>
-      <button class="btn" id="btnClose">Chiudi</button>
-    </div>
-    <div class="modal-body">
-      <form id="productForm">
-        <input type="hidden" id="p-id">
-        <div class="two-col">
-          <div>
-            <label for="p-name">Nome</label>
-            <input id="p-name" required placeholder="Es. Stracciatella">
-          </div>
-          <div>
-            <label for="p-cat">Categoria</label>
-            <input id="p-cat" placeholder="Es. Gelato, Sorbetto">
-          </div>
-          <div style="grid-column:1 / -1">
-            <label for="p-desc">Descrizione</label>
-            <textarea id="p-desc" rows="3" placeholder="Testo di presentazione"></textarea>
-          </div>
-          <div style="grid-column:1 / -1">
-            <label for="p-ing">Ingredienti</label>
-            <textarea id="p-ing" rows="2" placeholder="Es. latte, panna, cacao..."></textarea>
-          </div>
-          <div style="grid-column:1 / -1">
-            <label for="p-img">URL immagine</label>
-            <input id="p-img" placeholder="https://...">
-          </div>
-          <div>
-            <label for="p-available">Disponibile</label>
-            <select id="p-available">
-              <option value="true">Sì</option>
-              <option value="false">No</option>
-            </select>
-          </div>
-          <div>
-            <label for="p-tags">Tag (separati da virgola)</label>
-            <input id="p-tags" placeholder="vegano, senza glutine">
-          </div>
-          <div>
-            <label for="p-order">Ordine</label>
-            <input id="p-order" type="number" value="0">
-          </div>
-        </div>
-        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
-          <button type="button" class="btn" id="btnCancel">Annulla</button>
-          <button class="btn primary" id="btnSave" type="submit">Salva</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<script type="module">
-  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
-
-  // === Supabase client (Anon key SOLO en front) ===
-  const supabase = createClient(
-    "https://tcfmeggqhxcnihkmnkqs.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjZm1lZ2dxaHhjbmloa21ua3FzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxOTAzMjUsImV4cCI6MjA3Mjc2NjMyNX0.VYkrvIVWti57W9UOnQcCvywmonWGyrtIT4KAzszbiFs"
-  );
-
-  // ====== GUARD: solo manager ======
-  async function ensureManager() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { location.href = "/login.html"; return false; }
-    const { data: prof, error } = await supabase.from('profiles').select('role, full_name').eq('user_id', user.id).single();
-    if (error || !prof) { location.href = "/login.html"; return false; }
-    if (prof.role !== 'manager') { location.href = "/employee.html"; return false; }
-    // hint en brand
-    const brand = document.querySelector('.brand');
-    if (brand && prof.full_name) brand.title = `Manager: ${prof.full_name}`;
-    return true;
-  }
-
-  // ====== LOGOUT ======
-  window.logout = async () => {
-    await supabase.auth.signOut();
-    location.href = "/login.html";
-  };
-
-  // ====== UI refs ======
-  const DEFAULT_IMG = 'https://images.unsplash.com/photo-1551024709-8f23befc6cf7?w=800&auto=format&fit=crop';
-  const app   = document.getElementById('app');
-  const qSearch = document.getElementById('search');
-  const list  = document.getElementById('plist');
-  const empty = document.getElementById('empty');
-  const errBox= document.getElementById('err');
-  const modal = document.getElementById('productModal');
-  const btnNew= document.getElementById('btnNew');
-  const btnClose=document.getElementById('btnClose');
-  const btnCancel=document.getElementById('btnCancel');
-  const form  = document.getElementById('productForm');
-  const btnSave = document.getElementById('btnSave');
-
-  const fId   = document.getElementById('p-id');
-  const fName = document.getElementById('p-name');
-  const fCat  = document.getElementById('p-cat');
-  const fDesc = document.getElementById('p-desc');
-  const fIng  = document.getElementById('p-ing');
-  const fImg  = document.getElementById('p-img');
-  const fAvail= document.getElementById('p-available');
-  const fTags = document.getElementById('p-tags');
-  const fOrder= document.getElementById('p-order');
-
-  function setHidden(el, hidden){ el.style.display = hidden ? 'none' : ''; }
-  function toggleProductModal(show){
-    modal.classList[show?'add':'remove']('open');
-    modal.setAttribute('aria-hidden', show ? 'false' : 'true');
-  }
-
-  // ====== Skeletons ======
-  function showSkeleton(count=6){
-    list.innerHTML = '';
-    for(let i=0;i<count;i++){
-      const wrap = document.createElement('div');
-      wrap.className = 'sk-card';
-      wrap.innerHTML = `
-        <div class="skeleton sk-img"></div>
-        <div class="skeleton" style="height:16px; width:60%"></div>
-        <div class="skeleton" style="height:12px; width:40%"></div>
-        <div class="skeleton" style="height:12px; width:80%"></div>
-      `;
-      list.appendChild(wrap);
-    }
-    setHidden(empty, true); setHidden(errBox, true);
-  }
-
-  // ====== Render ======
-  function productCard(p){
-    const div = document.createElement('div');
-    div.className = 'card';
-    const safeName = p.name ?? '';
-    const safeCat  = p.category || '—';
-    const safeDesc = p.description || '';
-    const safeIng  = p.ingredients || '';
-    div.innerHTML = `
-      <img src="${p.image_url || DEFAULT_IMG}" alt="" style="width:100%;height:160px;object-fit:cover;border-radius:8px"/>
-      <h3 style="margin:.5rem 0">${safeName}</h3>
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <small class="badge">${safeCat}</small>
-        <small>${p.is_available ? 'Disponibile' : 'Non disponibile'}</small>
-      </div>
-      ${safeDesc ? `<p style="margin:.5rem 0;color:#555">${safeDesc}</p>` : ''}
-      ${safeIng ? `<p><strong>Ingredienti:</strong> ${safeIng}</p>` : ''}
-      <div class="actions">
-        <button class="btn btn-edit">Modifica</button>
-        <button class="btn danger btn-del">Elimina</button>
-      </div>
-    `;
-    div.querySelector('.btn-edit').onclick = () => openProductForm(p);
-    div.querySelector('.btn-del').onclick  = () => delProduct(p.id);
-    return div;
-  }
-
-  // ====== CRUD ======
-  async function loadProducts(){
-    try{
-      showSkeleton(6);
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('sort_order', { ascending: true })
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-
-      const q = qSearch.value.trim().toLowerCase();
-      const filtered = (data||[])
-        .filter(p => !q || (p.name?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q)));
-
-      list.innerHTML = '';
-      filtered.forEach(p => list.appendChild(productCard(p)));
-      setHidden(empty, filtered.length !== 0);
-      setHidden(errBox, true);
-    }catch(e){
-      console.error(e);
-      list.innerHTML = '';
-      setHidden(empty, true);
-      errBox.textContent = 'Errore caricando i prodotti: ' + (e.message||e);
-      setHidden(errBox, false);
-    }
-  }
-
-  function openProductForm(prod){
-    document.getElementById('pm-title').textContent = prod ? 'Modifica prodotto' : 'Nuovo prodotto';
-    form.reset();
-    fId.value = prod?.id || '';
-    fName.value = prod?.name || '';
-    fCat.value = prod?.category || '';
-    fDesc.value = prod?.description || '';
-    fIng.value = prod?.ingredients || '';
-    fImg.value = prod?.image_url || '';
-    fAvail.value = String(prod?.is_available ?? true);
-    fTags.value = Array.isArray(prod?.tags) ? prod.tags.join(', ') : '';
-    fOrder.value = prod?.sort_order ?? 0;
-    toggleProductModal(true);
-    setTimeout(()=>fName.focus(), 10);
-  }
-
-  async function submitProduct(e){
-    e.preventDefault();
-    const id = fId.value.trim();
-    const body = {
-      name: fName.value.trim(),
-      category: fCat.value.trim() || null,
-      image_url: fImg.value.trim() || null,
-      description: fDesc.value.trim() || null,
-      ingredients: fIng.value.trim() || null,
-      is_available: fAvail.value === 'true',
-      tags: fTags.value ? fTags.value.split(',').map(s=>s.trim()).filter(Boolean) : [],
-      sort_order: Number(fOrder.value || 0)
-    };
-    if(!body.name){ alert('Nome richiesto'); fName.focus(); return; }
-
-    btnSave.disabled = true;
-    const old = btnSave.textContent;
-    btnSave.textContent = 'Salvataggio…';
-
-    try{
-      if (id) {
-        const { error } = await supabase.from('products').update(body).eq('id', id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('products').insert(body);
-        if (error) throw error;
-      }
-      toggleProductModal(false);
-      await loadProducts();
-    }catch(e){
-      alert(e.message || e);
-    }finally{
-      btnSave.disabled = false;
-      btnSave.textContent = old;
-    }
-  }
-
-  async function delProduct(id){
-    if(!confirm('Eliminare prodotto?')) return;
-    const btn = document.activeElement;
-    if (btn) btn.disabled = true;
-    try{
-      const { error } = await supabase.from('products').delete().eq('id', id);
-      if (error) throw error;
-      await loadProducts();
-    }catch(e){
-      alert(e.message || e);
-    }finally{
-      if (btn) btn.disabled = false;
-    }
-  }
-  window.delProduct = delProduct;
-
-  // ====== Eventos ======
-  document.getElementById('btnNew').addEventListener('click', ()=> openProductForm(null));
-  document.getElementById('btnClose').addEventListener('click', ()=> toggleProductModal(false));
-  document.getElementById('btnCancel').addEventListener('click', ()=> toggleProductModal(false));
-  form.addEventListener('submit', submitProduct);
-
-  // Búsqueda con debounce
-  let tSearch;
-  qSearch.addEventListener('input', ()=>{
-    clearTimeout(tSearch);
-    tSearch = setTimeout(loadProducts, 250);
-  });
-
-  // ====== Boot ======
-  (async function init(){
-    const ok = await ensureManager();
-    if (!ok) return;
-    app.hidden = false;
-    await loadProducts();
-  })();
-</script>
+<body class="font-sans text-gray-900">
+  <script>
+    alert("✅ Supabase è ora incluso. Ora possiamo continuare con la lettura/scrittura dei dati veri.");
+  </script>
 </body>
 </html>
