@@ -220,7 +220,7 @@
     </div>
   </main>
 <!-- ====== DETALLE EMPLEADO (sheet) ====== -->
-<div class="sheet2" id="empDetail">
+<div class="sheet" id="empDetail">
   <div class="panel">
     <div class="head">
       <button class="btn ghost" id="closeEmpDetail" type="button">Chiudi</button>
@@ -544,8 +544,8 @@ async function loadEmployeesMonth() {
       const start = s.start_time?.slice(0, 5);
       const end   = s.end_time?.slice(0, 5);
       if (!start || !end) continue;
-      let h = parseHours(`${start}-${end}`);
 
+      let h = parseHours(`${start}-${end}`);
       const paid = (typeof s.break_paid === 'boolean') ? s.break_paid : false;
       const brk  = Number(s.break_minutes || 0);
       if (!paid) h -= brk / 60;
@@ -555,17 +555,16 @@ async function loadEmployeesMonth() {
     }
 
     // render tabella
-    empBody.inneruffled = ''; // in case; otherwise comment this line if your env doesn't allow it
     empBody.innerHTML = '';
     for (const emp of list) {
       const tr = document.createElement('tr');
-      tr.setAttribute('data-id', emp.id);      // <-- ID del dipendente per i click
+      tr.setAttribute('data-id', emp.id);      // <-- necesario para abrir el detalle
       tr.style.cursor = 'pointer';
 
-      const rep = emp.department ? `<span class="badge">${emp.department}</span>` : '—';
-      const role = emp.role || '—';
+      const rep   = emp.department ? `<span class="badge">${emp.department}</span>` : '—';
+      const role  = emp.role || '—';
       const stato = emp.is_active ? '<span class="badge">attivo</span>' : '<span class="badge">non attivo</span>';
-      const ore = Math.round(hoursByEmp.get(emp.id) || 0);
+      const ore   = Math.round(hoursByEmp.get(emp.id) || 0);
 
       tr.innerHTML = `
         <td>${emp.name}</td>
@@ -575,18 +574,17 @@ async function loadEmployeesMonth() {
         <td class="right">${ore}</td>
       `;
 
-      // cliccabile per aprire il dettaglio
+      // clic para abrir el sheet de detalle
       tr.addEventListener('click', () => openEmployeeDetail(emp.id));
 
-      empBody.push ? empBody.push(tr) : empBody.appendChild(tr); // if your env supports .push on NodeList comment this line and keep appendChild
       empBody.appendChild(tr);
     }
 
     if (!empBody.children.length) {
-      empBody.innerHTML = `<tr><td colspan="5" class="small">Nessun dipendente.</td=tr>`;
+      empBody.innerHTML = `<tr><td colspan="5" class="small">Nessun dipendente.</td></tr>`;
     }
   } catch (e) {
-    empBody.innerHTML = `<tr><td colspan="5" class="small" style="color:#b00020">Errore: ${e.message || e}</td=tr>`;
+    empBody.innerHTML = `<tr><td colspan="5" class="small" style="color:#b00020">Errore: ${e.message || e}</td></tr>`;
   }
 }
 
