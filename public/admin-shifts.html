@@ -219,7 +219,37 @@
       </div>
     </div>
   </main>
+<!-- ====== DETALLE EMPLEADO (sheet) ====== -->
+<div class="sheet2" id="empDetail">
+  <div class="panel">
+    <div class="head">
+      <button class="btn ghost" id="closeEmpDetail" type="button">Chiudi</button>
+      <div class="title" id="empDetailTitle">Dettagli</div>
+    </div>
+    <div class="body">
+      <div class="row" style="gap:12px;margin-bottom:10px">
+        <div class="avatar" id="empDetailAvatar" style="--s:42px"></div>
+        <div class="meta">
+          <div class="v" id="empDetailName">—</div>
+          <div class="k"><span id="empDetailRole">—</span> · <span class="badge" id="empDetailDep">—</span></div>
+        </div>
+        <div style="margin-left:auto;text-align:right">
+          <div class="k">Ore mese</div>
+          <div class="v" id="empDetailHours">0</div>
+        </div>
+      </div>
 
+      <div class="actions">
+        <button class="btn secondary" id="btnAutoMonthEmp">Auto mese</button>
+        <button class="btn" id="btnAutoYearEmp">Auto anno</button>
+        <button class="btn" id="btnGotoTable">Vai alla tabella</button>
+      </div>
+
+      <h3 style="margin-top:6px">Prossimi turni (14 giorni)</h3>
+      <div class="list" id="empDetailList"><div class="small">Caricamento…</div></div>
+    </div>
+  </div>
+</div>
   <!-- Bottom-sheet Add Employee -->
   <div class="sheet" id="sheet">
     <div class="panel">
