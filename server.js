@@ -311,6 +311,133 @@ app.delete('/api/shifts/:id', requireManager, async (req, res) => {
   }
 });
 
+// ====== ASSEGNA TURNI ======
+const assignEmpSel   = document.getElementById('assign-emp');
+const assignGrid     = document.getElementById('assign-grid');
+const assignSaveBtn  = document.getElementById('assign-save');
+const assignWeekLbl  = document.getElementById('assign-week-label');
+const assignFillStd  = document.getElementById('assign-fill-std');
+const assignClearBtn = document.getElementById('assign-clear');
+
+function dayName(i){
+  return ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'][i];
+}
+
+function renderAssignPanel(){
+  // etiqueta semana
+  const it = new Intl.DateTimeFormat('it-IT',{ day:'2-digit', month:'2-digit', year:'numeric' });
+  assignWeekLbl.textContent = it.format(weekStart);
+
+  // selector empleados
+  assignEmpSel.innerHTML = employees
+    .map(e => `<option value="${e.id}">${e.name}${e.department?` – ${e.department}`:''}</option>`)
+    .join('');
+
+  // tarjetas por día
+  assignGrid.innerHTML = '';
+  const days = Array.from({length:7}, (_,i)=>addDays(weekStart,i));
+  days.forEach((d,idx)=>{
+    const iso = toISO(d);
+    const div = document.createElement('div');
+    div.className = 'assign-day';
+    div.dataset.dayIdx = idx;
+    div.innerHTML = `
+      <h4>${dayName(idx)} <small style="color:#64748b">${iso}</small></h4>
+      <div class="assign-row">
+        <label class="assign-off"><input type="checkbox" class="off"> OFF</label>
+        <input type="time" class="st">
+        <span>→</span>
+        <input type="time" class="en">
+      </div>
+      <div class="assign-row" style="margin-top:6px">
+        <label>Pausa (min)</label>
+        <input type="number" class="brk" min="0" value="0" style="width:90px">
+        <label class="assign-off"><input type="checkbox" class="paid"> Retribuita</label>
+      </div>
+    `;
+    // comportamiento OFF
+    const off = div.querySelector('.off');
+    const st  = div.querySelector('.st');
+    const en  = div.querySelector('.en');
+    off.addEventListener('change', ()=>{
+      const dis = off.checked;
+      [st,en].forEach(i => { i.disabled = dis; if(dis){ i.value=''; } });
+    });
+    assignGrid.appendChild(div);
+  });
+}
+
+// helpers “rellenar”
+assignFillStd.addEventListener('click', ()=>{
+  [...assignGrid.querySelectorAll('.assign-day')].forEach(card=>{
+    card.querySelector('.off').checked = false;
+    const st = card.querySelector('.st'); const en = card.querySelector('.en');
+    st.disabled = en.disabled = false; st.value = '09:00'; en.value = '18:00';
+  });
+});
+assignClearBtn.addEventListener('click', ()=>{
+  [...assignGrid.querySelectorAll('.assign-day')].forEach(card=>{
+    card.querySelector('.off').checked = true;
+    const st = card.querySelector('.st'); const en = card.querySelector('.en');
+    st.value = ''; en.value = ''; st.disabled = en.disabled = true;
+    card.querySelector('.brk').value = 0; card.querySelector('.paid').checked = false;
+  });
+});
+
+// guardar
+assignSaveBtn.addEventListener('click', async ()=>{
+  const empId = Number(assignEmpSel.value);
+  if(!empId){ alert('Seleziona un dipendente'); return; }
+
+  const payload = [];
+  [...assignGrid.querySelectorAll('.assign-day')].forEach(card=>{
+    const idx  = Number(card.dataset.dayIdx);
+    const date = toISO(addDays(weekStart, idx));
+    const off  = card.querySelector('.off').checked;
+    const st   = card.querySelector('.st').value;
+    const en   = card.querySelector('.en').value;
+    const brk  = Number(card.querySelector('.brk').value||0);
+    const paid = card.querySelector('.paid').checked;
+
+    if(off || (!st || !en)){
+      payload.push({ employee_id: empId, date, off: true });
+    }else{
+      payload.push({
+        employee_id: empId,
+        date,
+        start_time: st,
+        end_time: en,
+        break_minutes: brk,
+        break_paid: paid   // si tienes esta columna; si no, puedes quitarla
+      });
+    }
+  });
+
+  try{
+    assignSaveBtn.disabled = true; assignSaveBtn.textContent = 'Salvataggio…';
+    await supabase.rpc('upsert_shifts_bulk', { payload: { items: payload } });
+    // refresca semana y panel de horas
+    const fromISO = toISO(weekStart);
+    const toISOstr = toISO(addDays(weekStart, 6));
+    shifts = await getShifts(fromISO, toISOstr);
+    renderWeek(); renderMates();
+    await loadEmployeesMonth?.(); // si tienes el resumen mensual
+    alert('Turni assegnati!');
+  }catch(e){
+    console.error(e);
+    alert(e.message || 'Errore nel salvataggio');
+  }finally{
+    assignSaveBtn.disabled = false; assignSaveBtn.textContent = '💾 Salva turni';
+  }
+});
+
+// cada vez que cambie la settimana o la lista de empleados, vuelve a pintar
+// Llama a renderAssignPanel() en tu init y también en reloadWeek() después de cargar employees/shifts:
+
+
+
+
+
 // ==== Fallback SPA (Express 5 compatible, sin '*') ====
 app.use((req, res, next) => {
   if (req.method !== 'GET') return next();
