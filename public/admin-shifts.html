@@ -522,57 +522,73 @@
       }
     }
 
-    // === Personale: lista + ore mese corrente ===
-    function monthLabelText(d){ return new Intl.DateTimeFormat('it-IT',{ month:'long', year:'numeric' }).format(d); }
+  // === Personale: lista + ore mese corrente ===
+function monthLabelText(d) {
+  return new Intl.DateTimeFormat('it-IT', { month: 'long', year: 'numeric' }).format(d);
+}
 
-    async function loadEmployeesMonth(){
-      empBody.innerHTML = `<tr><td colspan="5" class="small">Caricamento…</td></tr>`;
-      const now = new Date();
-      monthLabel.textContent = monthLabelText(now);
-      const [fromISO, toISOstr] = monthRange(now);
+async function loadEmployeesMonth() {
+  empBody.innerHTML = `<tr><td colspan="5" class="small">Caricamento…</td></tr>`;
+  const now = new Date();
+  monthLabel.textContent = monthLabelText(now);
+  const [fromISO, toISOstr] = monthRange(now);
 
-      try{
-        const list = await getEmployees();
-        const monthShifts = await getShifts(fromISO, toISOstr);
+  try {
+    const list = await getEmployees();
+    const monthShifts = await getShifts(fromISO, toISOstr);
 
-        const hoursByEmp = new Map();
-        for(const s of monthShifts){
-          if (s.off) continue;
-          const start = s.start_time?.slice(0,5);
-          const end   = s.end_time?.slice(0,5);
-          if(!start || !end) continue;
-          let h = parseHours(`${start}-${end}`);
-          const paid = (typeof s.break_paid === 'boolean') ? s.break_paid : false;
-          const brk = Number(s.break_minutes||0);
-          if (!paid) h -= brk/60;
-          if (h<0) h=0;
-          hoursByEmp.set(s.employee_id, (hoursByEmp.get(s.employee_id)||0) + h);
-        }
+    // mappa ore per dipendente
+    const hoursByEmp = new Map();
+    for (const s of monthShifts) {
+      if (s.off) continue;
+      const start = s.start_time?.slice(0, 5);
+      const end   = s.end_time?.slice(0, 5);
+      if (!start || !end) continue;
+      let h = parseHours(`${start}-${end}`);
 
-        empBody.innerHTML = '';
-        for(const emp of list){
-          const tr = document.createElement('tr');
-          const rep = emp.department ? `<span class="badge">${emp.department}</span>` : '—';
-          const role = emp.role || '—';
-          const stato = emp.is_active ? '<span class="badge">attivo</span>' : '<span class="badge">non attivo</span>';
-          const ore = Math.round(hoursByEmp.get(emp.id)||0);
-          tr.innerHTML = `
-            <td>${emp.name}</td>
-            <td>${rep}</td>
-            <td>${role}</td>
-            <td>${stato}</td>
-            <td class="right">${ore}</td>
-          `;
-          empBody.appendChild(tr);
-        }
+      const paid = (typeof s.break_paid === 'boolean') ? s.break_paid : false;
+      const brk  = Number(s.break_minutes || 0);
+      if (!paid) h -= brk / 60;
+      if (h < 0) h = 0;
 
-        if(!empBody.children.length){
-          empBody.innerHTML = `<tr><td colspan="5" class="small">Nessun dipendente.</td></tr>`;
-        }
-      }catch(e){
-        empBody.innerHTML = `<tr><td colspan="5" class="small" style="color:#b00020">Errore: ${e.message||e}</td></tr>`;
-      }
+      hoursByEmp.set(s.employee_id, (hoursByEmp.get(s.employee_id) || 0) + h);
     }
+
+    // render tabella
+    empBody.inneruffled = ''; // in case; otherwise comment this line if your env doesn't allow it
+    empBody.innerHTML = '';
+    for (const emp of list) {
+      const tr = document.createElement('tr');
+      tr.setAttribute('data-id', emp.id);      // <-- ID del dipendente per i click
+      tr.style.cursor = 'pointer';
+
+      const rep = emp.department ? `<span class="badge">${emp.department}</span>` : '—';
+      const role = emp.role || '—';
+      const stato = emp.is_active ? '<span class="badge">attivo</span>' : '<span class="badge">non attivo</span>';
+      const ore = Math.round(hoursByEmp.get(emp.id) || 0);
+
+      tr.innerHTML = `
+        <td>${emp.name}</td>
+        <td>${rep}</td>
+        <td>${role}</td>
+        <td>${stato}</td>
+        <td class="right">${ore}</td>
+      `;
+
+      // cliccabile per aprire il dettaglio
+      tr.addEventListener('click', () => openEmployeeDetail(emp.id));
+
+      empBody.push ? empBody.push(tr) : empBody.appendChild(tr); // if your env supports .push on NodeList comment this line and keep appendChild
+      empBody.appendChild(tr);
+    }
+
+    if (!empBody.children.length) {
+      empBody.innerHTML = `<tr><td colspan="5" class="small">Nessun dipendente.</td=tr>`;
+    }
+  } catch (e) {
+    empBody.innerHTML = `<tr><td colspan="5" class="small" style="color:#b00020">Errore: ${e.message || e}</td=tr>`;
+  }
+}
 
     // ======== TURNI (settimana) ========
     function renderWeek(){
