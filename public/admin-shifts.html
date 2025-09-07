@@ -6,6 +6,16 @@
   <title>Dashboard Turni CREMA</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@unocss/reset/tailwind.css">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    window.supabase = createClient(
+      'https://tcfmeggqhxcnihkmnkqs.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjZm1lZ2dxaHhjbmloa21ua3FzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxOTAzMjUsImV4cCI6MjA3Mjc2NjMyNX0.VYkrvIVWti57W9UOnQcCvywmonWGyrtIT4KAzszbiFs'
+    );
+  </script>
+  <script type="module">
+    import '/js/dashboard.js';
+  </script>
   <style>
     :root {
       --bg: #fffce3;
@@ -16,36 +26,9 @@
     body {
       background-color: var(--bg);
     }
-    .shadow-card {
-      box-shadow: 0 10px 30px rgba(2,6,23,0.08);
-    }
-    .shift-cell {
-      @apply text-center py-2 px-1 text-sm font-medium border border-gray-200 whitespace-nowrap;
-    }
-    .shift-row {
-      @apply grid grid-cols-9 items-center;
-    }
-    .shift-header {
-      @apply bg-orange-600 text-white font-semibold;
-    }
-    .shift-off {
-      @apply bg-orange-50 text-gray-400;
-    }
-    .shift-name {
-      @apply flex items-center gap-2 px-2;
-    }
-    .shift-name .initials {
-      @apply w-8 h-8 rounded-full bg-orange-400 text-white font-bold grid place-items-center flex-shrink-0;
-    }
-    @media (max-width: 768px) {
-      .shift-row {
-        grid-template-columns: 140px repeat(7, 1fr) 60px;
-      }
-    }
   </style>
 </head>
 <body class="font-sans text-gray-900">
-  <!-- HEADER -->
   <header class="sticky top-0 z-50 bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between shadow-sm">
     <img src="https://gelatocrema.com/cdn/shop/files/logo_color.svg?v=1693061670&width=100" alt="CREMA Logo" class="h-10">
     <div class="flex gap-2">
@@ -55,173 +38,85 @@
     </div>
   </header>
 
-  <!-- CALENDAR SECTION -->
-  <section class="bg-gradient-to-br from-orange-700 to-orange-400 text-white p-4 rounded-xl shadow-card max-w-4xl mx-auto my-6">
-    <div class="flex justify-between items-center mb-2">
-      <h2 class="text-lg font-semibold">Calendario Turni</h2>
-      <input type="month" id="calendarMonth" value="2025-09" class="bg-white text-black text-sm px-2 py-1 rounded-md">
-    </div>
-
-    <div class="mb-3">
-      <button id="btnAddWorker" class="bg-white text-orange-700 font-bold py-1 px-3 rounded hover:bg-orange-100">+ Nuovo Dipendente</button>
-    </div>
-
-    <!-- Sezione per assegnare turno -->
-    <div class="bg-white p-4 text-black rounded-lg mb-4">
-      <h3 class="font-semibold mb-2">Assegna un giorno di lavoro</h3>
-      <form id="assignShiftForm" class="flex flex-wrap items-center gap-2">
-        <input type="date" id="shiftDate" class="border px-2 py-1 rounded" required>
-        <select id="employeeName" class="border px-2 py-1 rounded" required></select>
-        <input type="time" id="shiftStart" class="border px-2 py-1 rounded" required>
-        <input type="time" id="shiftEnd" class="border px-2 py-1 rounded" required>
-        <select id="employeeRole" class="border px-2 py-1 rounded">
-          <option value="">Seleziona ruolo</option>
+  <main class="max-w-4xl mx-auto p-4">
+    <section class="bg-white p-4 rounded shadow mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold">Assegna un turno</h2>
+        <button id="openEmployeeForm" class="bg-orange-600 text-white px-3 py-1 rounded text-sm">+ Nuovo Dipendente</button>
+      </div>
+      <form id="shiftForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <input required type="date" id="shiftDate" class="border px-2 py-1 rounded" />
+        <select required id="employeeName" class="border px-2 py-1 rounded"></select>
+        <input required type="time" id="startTime" class="border px-2 py-1 rounded" />
+        <input required type="time" id="endTime" class="border px-2 py-1 rounded" />
+        <select required id="role" class="border px-2 py-1 rounded">
+          <option value="">Ruolo</option>
           <option value="Addetto banco">Addetto banco</option>
           <option value="Laboratorio">Laboratorio</option>
+          <option value="Manager">Manager</option>
         </select>
-        <button type="submit" class="bg-orange-600 text-white px-3 py-1 rounded">Aggiungi</button>
+        <button class="bg-orange-600 text-white px-4 py-2 rounded" type="submit">Salva</button>
       </form>
+    </section>
+
+    <section class="bg-white p-4 rounded shadow mb-6">
+      <h2 class="text-lg font-semibold mb-2">Turni programmati</h2>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm" id="shiftTable">
+          <thead class="bg-orange-600 text-white">
+            <tr>
+              <th class="px-2 py-1 text-left">Data</th>
+              <th class="px-2 py-1 text-left">Nome</th>
+              <th class="px-2 py-1 text-left">Ruolo</th>
+              <th class="px-2 py-1 text-left">Inizio</th>
+              <th class="px-2 py-1 text-left">Fine</th>
+              <th class="px-2 py-1 text-left">Ore (–0.5h)</th>
+              <th class="px-2 py-1 text-left">Azioni</th>
+            </tr>
+          </thead>
+          <tbody id="shiftBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="bg-white p-4 rounded shadow">
+      <h2 class="text-lg font-semibold mb-2">Dipendenti registrati</h2>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm" id="employeeTable">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="px-2 py-1 text-left">Nome</th>
+              <th class="px-2 py-1 text-left">Email</th>
+              <th class="px-2 py-1 text-left">Reparto</th>
+              <th class="px-2 py-1 text-left">Ruolo</th>
+              <th class="px-2 py-1 text-left">Azioni</th>
+            </tr>
+          </thead>
+          <tbody id="employeeBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- MODAL: Nuovo Dipendente -->
+    <div id="employeeModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden">
+      <div class="bg-white rounded-lg p-6 w-full max-w-md">
+        <h2 class="text-xl font-semibold mb-4">Nuovo Dipendente</h2>
+        <form id="newEmployeeForm" class="space-y-3">
+          <input required type="text" id="newName" placeholder="Nome e Cognome" class="w-full border px-3 py-2 rounded">
+          <input required type="email" id="newEmail" placeholder="Email" class="w-full border px-3 py-2 rounded">
+          <select required id="newDepartment" class="w-full border px-3 py-2 rounded">
+            <option value="">Reparto</option>
+            <option value="Banco">Banco</option>
+            <option value="Laboratorio">Laboratorio</option>
+          </select>
+          <input required type="text" id="newRole" placeholder="Ruolo" class="w-full border px-3 py-2 rounded">
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" id="closeModal" class="px-3 py-1 border rounded">Annulla</button>
+            <button type="submit" class="bg-orange-600 text-white px-4 py-1 rounded">Registra</button>
+          </div>
+        </form>
+      </div>
     </div>
-
-    <div class="grid grid-cols-7 text-center text-sm font-medium">
-      <div>Lun</div><div>Mar</div><div>Mer</div><div>Gio</div><div>Ven</div><div>Sab</div><div>Dom</div>
-    </div>
-    <div id="calendarGrid" class="grid grid-cols-7 gap-1 mt-2 text-center"></div>
-    <div id="shiftDetails" class="mt-4 bg-white text-black p-4 rounded-md hidden">
-      <h3 class="font-semibold text-lg mb-2">Turni del giorno selezionato</h3>
-      <ul id="shiftList" class="space-y-2 text-sm"></ul>
-    </div>
-  </section>
-
-  <script>
-    const calendarGrid = document.getElementById("calendarGrid");
-    const calendarMonth = document.getElementById("calendarMonth");
-    const shiftDetails = document.getElementById("shiftDetails");
-    const shiftList = document.getElementById("shiftList");
-
-    const shiftForm = document.getElementById("assignShiftForm");
-    const shiftDate = document.getElementById("shiftDate");
-    const employeeName = document.getElementById("employeeName");
-    const shiftStart = document.getElementById("shiftStart");
-    const shiftEnd = document.getElementById("shiftEnd");
-    const employeeRole = document.getElementById("employeeRole");
-
-    const btnAddWorker = document.getElementById("btnAddWorker");
-    btnAddWorker.onclick = () => alert("Funzione di creazione dipendente in arrivo. Sarà un modulo completo!");
-
-    const fakeShifts = {
-      "2025-09-08": [
-        { name: "Camelia V.", time: "15:15–23:45", role: "Addetto banco" },
-        { name: "Kevin L.", time: "08:30–15:30", role: "Laboratorio" },
-      ],
-      "2025-09-09": [
-        { name: "Steven A.", time: "11:00–19:30", role: "Addetto banco" }
-      ]
-    };
-
-    const roleByName = {
-      "Steven A.": "Addetto banco",
-      "Kevin L.": "Laboratorio",
-      "Lukshan P.": "Laboratorio",
-    };
-
-    const employeeList = [
-      "Camelia V.",
-      "Elsaida M.",
-      "Kevin L.",
-      "Lukshan P.",
-      "Patricia D.",
-      "Steven A.",
-      "Store Manager"
-    ];
-
-    employeeList.forEach(name => {
-      const opt = document.createElement("option");
-      opt.value = name;
-      opt.textContent = name;
-      employeeName.appendChild(opt);
-    });
-
-    employeeName.addEventListener("change", () => {
-      const selected = employeeName.value;
-      if (roleByName[selected]) {
-        employeeRole.value = roleByName[selected];
-      }
-    });
-
-    shiftForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const date = shiftDate.value;
-      const name = employeeName.value;
-      const start = shiftStart.value;
-      const end = shiftEnd.value;
-      const role = employeeRole.value.trim();
-
-      if (!fakeShifts[date]) fakeShifts[date] = [];
-      fakeShifts[date].push({ name, time: `${start}–${end}`, role });
-
-      buildCalendar(calendarMonth.value);
-      if (selectedDate === date) showShiftsForDate(date);
-      shiftForm.reset();
-    });
-
-    calendarMonth.addEventListener("change", () => {
-      buildCalendar(calendarMonth.value);
-    });
-
-    let selectedDate = null;
-
-    function buildCalendar(ym) {
-      const [year, month] = ym.split("-").map(Number);
-      const start = new Date(year, month - 1, 1);
-      const end = new Date(year, month, 0);
-      const firstDay = start.getDay();
-      const totalDays = end.getDate();
-
-      calendarGrid.innerHTML = "";
-      let blank = (firstDay + 6) % 7;
-      for (let i = 0; i < blank; i++) {
-        calendarGrid.innerHTML += `<div></div>`;
-      }
-
-      for (let d = 1; d <= totalDays; d++) {
-        const dateISO = `${ym}-${String(d).padStart(2, "0")}`;
-        const cell = document.createElement("div");
-        cell.textContent = d;
-        cell.className = "bg-white text-black rounded-lg py-2 cursor-pointer hover:bg-orange-300 font-bold";
-        if (fakeShifts[dateISO]) cell.classList.add("bg-yellow-200");
-        cell.onclick = () => {
-          selectedDate = dateISO;
-          showShiftsForDate(dateISO);
-        };
-        calendarGrid.appendChild(cell);
-      }
-    }
-
-    function showShiftsForDate(dateStr) {
-      const shifts = fakeShifts[dateStr] || [];
-      shiftList.innerHTML = "";
-
-      if (shifts.length === 0) {
-        shiftList.innerHTML = `<li>Nessun turno assegnato per questo giorno.</li>`;
-      } else {
-        shifts.forEach(s => {
-          const [start, end] = s.time.split("–");
-          const [h1, m1] = start.split(":".slice());
-          const [h2, m2] = end.split(":".slice());
-          const startMin = parseInt(h1) * 60 + parseInt(m1);
-          const endMin = parseInt(h2) * 60 + parseInt(m2);
-          let hours = (endMin - startMin - 30) / 60;
-          if (hours < 0) hours += 24;
-          shiftList.innerHTML += `<li><strong>${s.name}</strong> – ${s.time} <span class="text-gray-500">(${s.role})</span> <span class="ml-2 text-green-600">(${hours.toFixed(1)}h)</span></li>`;
-        });
-      }
-
-      shiftDetails.classList.remove("hidden");
-      shiftDetails.scrollIntoView({ behavior: "smooth" });
-    }
-
-    buildCalendar(calendarMonth.value);
-  </script>
+  </main>
 </body>
 </html>
