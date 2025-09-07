@@ -764,6 +764,131 @@
         alert('Errore caricando dati da Supabase: ' + (err.message || err));
       }
     })();
+    // ====== DETALLE EMPLEADO ======
+let currentEmpId = null;
+let empHoursCache = new Map();
+
+const itDate = (d)=> new Intl.DateTimeFormat('it-IT',{weekday:'long', day:'2-digit', month:'long'}).format(d);
+const pad2 = n => String(n).padStart(2,'0');
+const toISOd = d => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+function addDays2(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+
+async function loadUpcomingShifts(empId){
+  const from = new Date(); from.setHours(0,0,0,0);
+  const to   = addDays2(from, 13);
+  const { data, error } = await supabase.from('shifts')
+    .select('date,start_time,end_time,off,break_minutes,break_paid')
+    .eq('employee_id', empId)
+    .gte('date', toISO(from))
+    .lte('date', toISO(to));
+  if (error) throw error;
+
+  const map = new Map();
+  (data||[]).forEach(s => map.set(String(s.date), s));
+
+  const items = [];
+  for(let d=new Date(from); d<=to; d.setDate(d.getDate()+1)){
+    const iso = toISOd(d);
+    const s = map.get(iso);
+    if (!s) {
+      items.push({ date:new Date(d), off:true });
+    } else {
+      items.push({
+        date:new Date(d),
+        off: !!s.off || !s.start_time || !s.end_time,
+        start: s.start_time?.slice(0,5),
+        end:   s.end_time?.slice(0,5),
+        brk:   s.break_minutes||0,
+        paid:  !!s.break_paid
+      });
+    }
+  }
+  return items;
+}
+
+function closeEmployeeDetail(){
+  document.getElementById('empDetail').classList.remove('open');
+}
+document.getElementById('closeEmpDetail').addEventListener('click', closeEmployeeDetail);
+document.getElementById('empDetail').addEventListener('click', (e)=>{
+  if(e.target.id==='empDetail') closeEmployeeDetail();
+});
+
+async function renderDetailList(){
+  const listEl = document.getElementById('empDetailList');
+  listEl.innerHTML = `<div class="small">Caricamento…</div>`;
+  try{
+    const items = await loadUpcomingShifts(currentEmpId);
+    listEl.innerHTML = items.map(it=>{
+      const when = itDate(it.date);
+      const body = it.off ? `<span class="badge">OFF</span>` :
+        `<strong>${it.start}–${it.end}</strong>${
+          it.brk?` <span class="sub">(${it.paid?'pausa pagata':'pausa'} ${it.brk}’)</span>`:''}`;
+      return `<div class="item"><div class="when">${when}</div><div>${body}</div></div>`;
+    }).join('');
+  }catch(e){
+    listEl.innerHTML = `<div class="small" style="color:#b00020">Errore: ${e.message||e}</div>`;
+  }
+}
+
+function openEmployeeDetail(empId){
+  currentEmpId = empId;
+  const emp = employees.find(e => String(e.id)===String(empId));
+  if(!emp) return;
+
+  document.getElementById('empDetailName').textContent = emp.name || '—';
+  document.getElementById('empDetailRole').textContent = emp.role || '—';
+  document.getElementById('empDetailDep').textContent  = emp.department || '—';
+  document.getElementById('empDetailAvatar').textContent = (emp.name||'').split(/\s+/).map(s=>s[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('empDetailHours').textContent = Math.round((empHoursCache.get(emp.id)||0));
+
+  document.getElementById('btnAutoMonthEmp').onclick = async ()=>{
+    try{ await autoAssignMonthFor(emp.id); await reloadWeek(); await loadEmployeesMonth(); await renderDetailList(); alert('Turni del mese generati.'); }
+    catch(e){ alert(e.message||e); }
+  };
+  document.getElementById('btnAutoYearEmp').onclick = async ()=>{
+    try{ await autoAssignYearFor(emp.id); await reloadWeek(); await loadEmployeesMonth(); await renderDetailList(); alert('Turni dell’anno generati.'); }
+    catch(e){ alert(e.message||e); }
+  };
+  document.getElementById('btnGotoTable').onclick = ()=>{
+    const row = document.querySelector(`#tblEmployees tbody tr[data-id="${emp.id}"]`);
+    if(row){
+      row.classList.add('hl');
+      document.querySelector('.table-wrap')?.scrollTo({ top: row.offsetTop-60, behavior:'smooth' });
+      setTimeout(()=> row.classList.remove('hl'), 2000);
+    }
+    closeEmployeeDetail();
+  };
+
+  renderDetailList();
+  document.getElementById('empDetail').classList.add('open');
+}
+
+// --- Hook a la tabla para abrir detalle por fila ---
+const _loadEmployeesMonth = loadEmployeesMonth;
+loadEmployeesMonth = async function(){
+  await _loadEmployeesMonth(); // lo tuyo de siempre
+
+  // guarda horas en cache + data-id en filas
+  empHoursCache = new Map();
+  [...document.querySelectorAll('#tblEmployees tbody tr')].forEach(tr=>{
+    const id = tr.getAttribute('data-id');
+    const oreTd = tr.querySelector('td.right');
+    if(id && oreTd){
+      const ore = Number(oreTd.textContent||0);
+      empHoursCache.set(Number(id), ore);
+    }
+  });
+
+  // listeners
+  document.querySelectorAll('#tblEmployees tbody tr').forEach(tr=>{
+    const id = tr.getAttribute('data-id');
+    if(!id) return;
+    tr.style.cursor='pointer';
+    tr.addEventListener('click', ()=> openEmployeeDetail(id));
+  });
+};
+    
   </script>
 </body>
 </html>
