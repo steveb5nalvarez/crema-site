@@ -194,3 +194,15 @@ img { max-width: 100%; height: auto; display: block; }
 }
 .assign-off{ display:flex; align-items:center; gap:6px }
 
+
+/* Modal responsive refinado para móvil */
+.modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.4); padding:16px; z-index:1100; }
+.modal.open{ display:flex; }
+.modal-content{ width:100%; max-width:640px; background:#fff; border-radius:16px; overflow:hidden; }
+.modal-header{ display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid rgba(0,0,0,.08); }
+.modal-body{ padding:16px; }
+.modal-body form label{ display:block; font-weight:600; font-size:.95rem; color:#444; margin-bottom:6px; }
+.modal-body input, .modal-body select{ width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px; }
+@media (max-width:640px){
+  .modal-content{ border-radius:12px; }
+}
