@@ -173,3 +173,24 @@ img { max-width: 100%; height: auto; display: block; }
 .table th, .table td { padding: 8px; border-bottom: 1px solid rgba(0,0,0,.08); }
 .table th { text-align: left; color: #666; font-weight: 600; }
 
+.assign-grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:10px;
+}
+@media (max-width: 720px){
+  .assign-grid{ grid-template-columns: 1fr; }
+}
+.assign-day{
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:12px;
+  background:#fff;
+}
+.assign-day h4{ margin:0 0 8px; font-size:15px }
+.assign-row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+.assign-row .input, .assign-row select, .assign-row input[type="time"], .assign-row input[type="number"]{
+  padding:10px 12px; border:1px solid var(--border); border-radius:10px;
+}
+.assign-off{ display:flex; align-items:center; gap:6px }
+
