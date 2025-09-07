@@ -109,7 +109,33 @@
       .table-wrap{border-radius:12px}
       .card{border-radius:18px}
       .row .input, .row select{flex:1 1 150px}
+      /* Evita sticky header dentro de overflow en móvil (iOS glitch) */
+      thead th{ position:static; }
     }
+
+    /* Suaviza scroll en iOS y evita repintados costosos */
+    .table-wrap{ -webkit-overflow-scrolling: touch; contain: paint; }
+
+    /* Sheet de detalle (empDetail) */
+    .sheet2{position:fixed;inset:0;display:none;background:rgba(2,6,23,.45);z-index:1000}
+    .sheet2.open{display:block}
+    .sheet2 .panel{
+      position:absolute;left:0;right:0;bottom:0;background:#fff;
+      border-top-left-radius:20px;border-top-right-radius:20px;
+      box-shadow:0 -10px 30px rgba(2,6,23,.15);
+      max-height:90vh;padding:16px;overflow:auto
+    }
+    .sheet2 .head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+    .sheet2 .head .title{font-weight:700;font-size:18px;margin-left:auto}
+    .sheet2 .body .item{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+    .sheet2 .body .item:last-child{border-bottom:none}
+    .sheet2 .body .when{color:#475569;font-size:14px}
+
+    /* Resaltado temporal al volver a la tabla */
+    #tblEmployees tbody tr.hl{outline:2px solid #f59e0b; outline-offset:-2px}
+
+    /* Bloqueo de scroll del body cuando un sheet está abierto */
+    body.no-scroll{ overflow:hidden; position:fixed; inset:0; width:100%; }
   </style>
 </head>
 
@@ -219,37 +245,39 @@
       </div>
     </div>
   </main>
-<!-- ====== DETALLE EMPLEADO (sheet) ====== -->
-<div class="sheet" id="empDetail">
-  <div class="panel">
-    <div class="head">
-      <button class="btn ghost" id="closeEmpDetail" type="button">Chiudi</button>
-      <div class="title" id="empDetailTitle">Dettagli</div>
-    </div>
-    <div class="body">
-      <div class="row" style="gap:12px;margin-bottom:10px">
-        <div class="avatar" id="empDetailAvatar" style="--s:42px"></div>
-        <div class="meta">
-          <div class="v" id="empDetailName">—</div>
-          <div class="k"><span id="empDetailRole">—</span> · <span class="badge" id="empDetailDep">—</span></div>
-        </div>
-        <div style="margin-left:auto;text-align:right">
-          <div class="k">Ore mese</div>
-          <div class="v" id="empDetailHours">0</div>
-        </div>
-      </div>
 
-      <div class="actions">
-        <button class="btn secondary" id="btnAutoMonthEmp">Auto mese</button>
-        <button class="btn" id="btnAutoYearEmp">Auto anno</button>
-        <button class="btn" id="btnGotoTable">Vai alla tabella</button>
+  <!-- ====== DETALLE EMPLEADO (sheet) ====== -->
+  <div class="sheet2" id="empDetail">
+    <div class="panel">
+      <div class="head">
+        <button class="btn ghost" id="closeEmpDetail" type="button">Chiudi</button>
+        <div class="title" id="empDetailTitle">Dettagli</div>
       </div>
+      <div class="body">
+        <div class="row" style="gap:12px;margin-bottom:10px">
+          <div class="avatar" id="empDetailAvatar" style="--s:42px"></div>
+          <div class="meta">
+            <div class="v" id="empDetailName">—</div>
+            <div class="k"><span id="empDetailRole">—</span> · <span class="badge" id="empDetailDep">—</span></div>
+          </div>
+          <div style="margin-left:auto;text-align:right">
+            <div class="k">Ore mese</div>
+            <div class="v" id="empDetailHours">0</div>
+          </div>
+        </div>
 
-      <h3 style="margin-top:6px">Prossimi turni (14 giorni)</h3>
-      <div class="list" id="empDetailList"><div class="small">Caricamento…</div></div>
+        <div class="actions">
+          <button class="btn secondary" id="btnAutoMonthEmp">Auto mese</button>
+          <button class="btn" id="btnAutoYearEmp">Auto anno</button>
+          <button class="btn" id="btnGotoTable">Vai alla tabella</button>
+        </div>
+
+        <h3 style="margin-top:6px">Prossimi turni (14 giorni)</h3>
+        <div class="list" id="empDetailList"><div class="small">Caricamento…</div></div>
+      </div>
     </div>
   </div>
-</div>
+
   <!-- Bottom-sheet Add Employee -->
   <div class="sheet" id="sheet">
     <div class="panel">
@@ -384,6 +412,10 @@
     const initials = name => (name||'').split(/\s+/).map(s=>s[0]).join('').slice(0,2).toUpperCase();
     const empCell = (name,role)=>`<div class="emp"><div class="avatar">${initials(name)}</div><div><div class="name">${name}</div><small>${role||''}</small></div></div>`;
 
+    // ======== BODY SCROLL LOCK ========
+    function lockBody(){ document.body.classList.add('no-scroll'); }
+    function unlockBody(){ document.body.classList.remove('no-scroll'); }
+
     // ======== STATO ========
     let employees = [];
     let shifts = [];
@@ -445,8 +477,8 @@
     }
 
     // ======== SHEET logic ========
-    function openSheet(){ sheet.classList.add('open'); setTimeout(()=>fullNameEl.focus(), 0); }
-    function closeSheet(){ sheet.classList.remove('open'); }
+    function openSheet(){ sheet.classList.add('open'); lockBody(); setTimeout(()=>fullNameEl.focus(), 0); }
+    function closeSheet(){ sheet.classList.remove('open'); unlockBody(); }
     openSheetBtn.addEventListener('click', openSheet);
     fabAdd.addEventListener('click', openSheet);
     closeSheetBtn.addEventListener('click', closeSheet);
@@ -496,24 +528,19 @@
         if(!res.ok){ throw new Error((out && (out.error||out.message)) || 'Errore creazione dipendente'); }
 
         empOk.textContent='Dipendente creato!';
-        // Auto-plan se richiesto
-        const justCreated = out?.user_id ? [{ id: out.user_id, is_active:true, department }] : null;
         if (autoM.checked || autoY.checked){
-          // ricarico employees se no tengo id numerico; por simplicidad disparo contra todos activos
           const list = await getEmployees();
           employees = list;
           if (autoM.checked) await autoAssignMonthFor(null);
           if (autoY.checked) await autoAssignYearFor(null);
         }
 
-        // limpia campos
         fullNameEl.value=''; emailEl.value=''; passwordEl.value=''; roleEl.value='';
         document.querySelectorAll('.seg button').forEach(b=>b.classList.remove('active'));
         document.querySelector('.seg button[data-dep="banco"]').classList.add('active');
         departmentHidden.value='banco';
 
         await loadEmployeesMonth();
-        // cierra sheet en móvil
         setTimeout(closeSheet, 500);
       }catch(e){
         empErr.textContent = e.message || e;
@@ -522,71 +549,67 @@
       }
     }
 
-  // === Personale: lista + ore mese corrente ===
-function monthLabelText(d) {
-  return new Intl.DateTimeFormat('it-IT', { month: 'long', year: 'numeric' }).format(d);
-}
-
-async function loadEmployeesMonth() {
-  empBody.innerHTML = `<tr><td colspan="5" class="small">Caricamento…</td></tr>`;
-  const now = new Date();
-  monthLabel.textContent = monthLabelText(now);
-  const [fromISO, toISOstr] = monthRange(now);
-
-  try {
-    const list = await getEmployees();
-    const monthShifts = await getShifts(fromISO, toISOstr);
-
-    // mappa ore per dipendente
-    const hoursByEmp = new Map();
-    for (const s of monthShifts) {
-      if (s.off) continue;
-      const start = s.start_time?.slice(0, 5);
-      const end   = s.end_time?.slice(0, 5);
-      if (!start || !end) continue;
-
-      let h = parseHours(`${start}-${end}`);
-      const paid = (typeof s.break_paid === 'boolean') ? s.break_paid : false;
-      const brk  = Number(s.break_minutes || 0);
-      if (!paid) h -= brk / 60;
-      if (h < 0) h = 0;
-
-      hoursByEmp.set(s.employee_id, (hoursByEmp.get(s.employee_id) || 0) + h);
+    // === Personale: lista + ore mese corrente ===
+    function monthLabelText(d) {
+      return new Intl.DateTimeFormat('it-IT', { month: 'long', year: 'numeric' }).format(d);
     }
 
-    // render tabella
-    empBody.innerHTML = '';
-    for (const emp of list) {
-      const tr = document.createElement('tr');
-      tr.setAttribute('data-id', emp.id);      // <-- necesario para abrir el detalle
-      tr.style.cursor = 'pointer';
+    async function loadEmployeesMonth() {
+      empBody.innerHTML = `<tr><td colspan="5" class="small">Caricamento…</td></tr>`;
+      const now = new Date();
+      monthLabel.textContent = monthLabelText(now);
+      const [fromISO, toISOstr] = monthRange(now);
 
-      const rep   = emp.department ? `<span class="badge">${emp.department}</span>` : '—';
-      const role  = emp.role || '—';
-      const stato = emp.is_active ? '<span class="badge">attivo</span>' : '<span class="badge">non attivo</span>';
-      const ore   = Math.round(hoursByEmp.get(emp.id) || 0);
+      try {
+        const list = await getEmployees();
+        const monthShifts = await getShifts(fromISO, toISOstr);
 
-      tr.innerHTML = `
-        <td>${emp.name}</td>
-        <td>${rep}</td>
-        <td>${role}</td>
-        <td>${stato}</td>
-        <td class="right">${ore}</td>
-      `;
+        const hoursByEmp = new Map();
+        for (const s of monthShifts) {
+          if (s.off) continue;
+          const start = s.start_time?.slice(0, 5);
+          const end   = s.end_time?.slice(0, 5);
+          if (!start || !end) continue;
 
-      // clic para abrir el sheet de detalle
-      tr.addEventListener('click', () => openEmployeeDetail(emp.id));
+          let h = parseHours(`${start}-${end}`);
+          const paid = (typeof s.break_paid === 'boolean') ? s.break_paid : false;
+          const brk  = Number(s.break_minutes || 0);
+          if (!paid) h -= brk / 60;
+          if (h < 0) h = 0;
 
-      empBody.appendChild(tr);
+          hoursByEmp.set(s.employee_id, (hoursByEmp.get(s.employee_id) || 0) + h);
+        }
+
+        empBody.innerHTML = '';
+        for (const emp of list) {
+          const tr = document.createElement('tr');
+          tr.setAttribute('data-id', emp.id);
+          tr.style.cursor = 'pointer';
+
+          const rep   = emp.department ? `<span class="badge">${emp.department}</span>` : '—';
+          const role  = emp.role || '—';
+          const stato = emp.is_active ? '<span class="badge">attivo</span>' : '<span class="badge">non attivo</span>';
+          const ore   = Math.round(hoursByEmp.get(emp.id) || 0);
+
+          tr.innerHTML = `
+            <td>${emp.name}</td>
+            <td>${rep}</td>
+            <td>${role}</td>
+            <td>${stato}</td>
+            <td class="right">${ore}</td>
+          `;
+
+          tr.addEventListener('click', () => openEmployeeDetail(emp.id));
+          empBody.appendChild(tr);
+        }
+
+        if (!empBody.children.length) {
+          empBody.innerHTML = `<tr><td colspan="5" class="small">Nessun dipendente.</td></tr>`;
+        }
+      } catch (e) {
+        empBody.innerHTML = `<tr><td colspan="5" class="small" style="color:#b00020">Errore: ${e.message || e}</td></tr>`;
+      }
     }
-
-    if (!empBody.children.length) {
-      empBody.innerHTML = `<tr><td colspan="5" class="small">Nessun dipendente.</td></tr>`;
-    }
-  } catch (e) {
-    empBody.innerHTML = `<tr><td colspan="5" class="small" style="color:#b00020">Errore: ${e.message || e}</td></tr>`;
-  }
-}
 
     // ======== TURNI (settimana) ========
     function renderWeek(){
@@ -765,6 +788,8 @@ async function loadEmployeesMonth() {
     });
     btnCreateEmp.addEventListener('click', createEmployee);
     btnReloadEmp.addEventListener('click', loadEmployeesMonth);
+    saveBtn.addEventListener('click', saveChanges);     // <-- añadido
+    matesDaySel.addEventListener('change', renderMates); // <-- añadido
 
     async function reloadWeek(){
       try{
@@ -786,7 +811,6 @@ async function loadEmployeesMonth() {
       app.hidden = false;
 
       try{
-        // Probar disponibilidad de RPC
         await supabase.rpc('upsert_shifts_bulk', { payload: { items: [] } });
         rpcAvailable = true;
       } catch {
@@ -808,131 +832,131 @@ async function loadEmployeesMonth() {
         alert('Errore caricando dati da Supabase: ' + (err.message || err));
       }
     })();
+
     // ====== DETALLE EMPLEADO ======
-let currentEmpId = null;
-let empHoursCache = new Map();
+    let currentEmpId = null;
+    let empHoursCache = new Map();
 
-const itDate = (d)=> new Intl.DateTimeFormat('it-IT',{weekday:'long', day:'2-digit', month:'long'}).format(d);
-const pad2 = n => String(n).padStart(2,'0');
-const toISOd = d => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
-function addDays2(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+    const itDate = (d)=> new Intl.DateTimeFormat('it-IT',{weekday:'long', day:'2-digit', month:'long'}).format(d);
+    const pad2 = n => String(n).padStart(2,'0');
+    const toISOd = d => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+    function addDays2(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
 
-async function loadUpcomingShifts(empId){
-  const from = new Date(); from.setHours(0,0,0,0);
-  const to   = addDays2(from, 13);
-  const { data, error } = await supabase.from('shifts')
-    .select('date,start_time,end_time,off,break_minutes,break_paid')
-    .eq('employee_id', empId)
-    .gte('date', toISO(from))
-    .lte('date', toISO(to));
-  if (error) throw error;
+    async function loadUpcomingShifts(empId){
+      const from = new Date(); from.setHours(0,0,0,0);
+      const to   = addDays2(from, 13);
+      const { data, error } = await supabase.from('shifts')
+        .select('date,start_time,end_time,off,break_minutes,break_paid')
+        .eq('employee_id', empId)
+        .gte('date', toISO(from))
+        .lte('date', toISO(to));
+      if (error) throw error;
 
-  const map = new Map();
-  (data||[]).forEach(s => map.set(String(s.date), s));
+      const map = new Map();
+      (data||[]).forEach(s => map.set(String(s.date), s));
 
-  const items = [];
-  for(let d=new Date(from); d<=to; d.setDate(d.getDate()+1)){
-    const iso = toISOd(d);
-    const s = map.get(iso);
-    if (!s) {
-      items.push({ date:new Date(d), off:true });
-    } else {
-      items.push({
-        date:new Date(d),
-        off: !!s.off || !s.start_time || !s.end_time,
-        start: s.start_time?.slice(0,5),
-        end:   s.end_time?.slice(0,5),
-        brk:   s.break_minutes||0,
-        paid:  !!s.break_paid
+      const items = [];
+      for(let d=new Date(from); d<=to; d.setDate(d.getDate()+1)){
+        const iso = toISOd(d);
+        const s = map.get(iso);
+        if (!s) {
+          items.push({ date:new Date(d), off:true });
+        } else {
+          items.push({
+            date:new Date(d),
+            off: !!s.off || !s.start_time || !s.end_time,
+            start: s.start_time?.slice(0,5),
+            end:   s.end_time?.slice(0,5),
+            brk:   s.break_minutes||0,
+            paid:  !!s.break_paid
+          });
+        }
+      }
+      return items;
+    }
+
+    function closeEmployeeDetail(){
+      document.getElementById('empDetail').classList.remove('open');
+      unlockBody();
+    }
+    document.getElementById('closeEmpDetail').addEventListener('click', closeEmployeeDetail);
+    document.getElementById('empDetail').addEventListener('click', (e)=>{
+      if(e.target.id==='empDetail') closeEmployeeDetail();
+    });
+
+    async function renderDetailList(){
+      const listEl = document.getElementById('empDetailList');
+      listEl.innerHTML = `<div class="small">Caricamento…</div>`;
+      try{
+        const items = await loadUpcomingShifts(currentEmpId);
+        listEl.innerHTML = items.map(it=>{
+          const when = itDate(it.date);
+          const body = it.off ? `<span class="badge">OFF</span>` :
+            `<strong>${it.start}–${it.end}</strong>${
+              it.brk?` <span class="sub">(${it.paid?'pausa pagata':'pausa'} ${it.brk}’)</span>`:''}`;
+          return `<div class="item"><div class="when">${when}</div><div>${body}</div></div>`;
+        }).join('');
+      }catch(e){
+        listEl.innerHTML = `<div class="small" style="color:#b00020">Errore: ${e.message||e}</div>`;
+      }
+    }
+
+    function openEmployeeDetail(empId){
+      currentEmpId = empId;
+      const emp = employees.find(e => String(e.id)===String(empId));
+      if(!emp) return;
+
+      document.getElementById('empDetailName').textContent = emp.name || '—';
+      document.getElementById('empDetailRole').textContent = emp.role || '—';
+      document.getElementById('empDetailDep').textContent  = emp.department || '—';
+      document.getElementById('empDetailAvatar').textContent = (emp.name||'').split(/\s+/).map(s=>s[0]).join('').slice(0,2).toUpperCase();
+      document.getElementById('empDetailHours').textContent = Math.round((empHoursCache.get(emp.id)||0));
+
+      document.getElementById('btnAutoMonthEmp').onclick = async ()=>{
+        try{ await autoAssignMonthFor(emp.id); await reloadWeek(); await loadEmployeesMonth(); await renderDetailList(); alert('Turni del mese generati.'); }
+        catch(e){ alert(e.message||e); }
+      };
+      document.getElementById('btnAutoYearEmp').onclick = async ()=>{
+        try{ await autoAssignYearFor(emp.id); await reloadWeek(); await loadEmployeesMonth(); await renderDetailList(); alert('Turni dell’anno generati.'); }
+        catch(e){ alert(e.message||e); }
+      };
+      document.getElementById('btnGotoTable').onclick = ()=>{
+        const row = document.querySelector(`#tblEmployees tbody tr[data-id="${emp.id}"]`);
+        if(row){
+          row.classList.add('hl');
+          document.querySelector('.table-wrap')?.scrollTo({ top: row.offsetTop-60, behavior:'smooth' });
+          setTimeout(()=> row.classList.remove('hl'), 2000);
+        }
+        closeEmployeeDetail();
+      };
+
+      renderDetailList();
+      document.getElementById('empDetail').classList.add('open');
+      lockBody();
+    }
+
+    // --- Hook a la tabla para abrir detalle por fila ---
+    const _loadEmployeesMonth = loadEmployeesMonth;
+    loadEmployeesMonth = async function(){
+      await _loadEmployeesMonth();
+
+      empHoursCache = new Map();
+      [...document.querySelectorAll('#tblEmployees tbody tr')].forEach(tr=>{
+        const id = tr.getAttribute('data-id');
+        const oreTd = tr.querySelector('td.right');
+        if(id && oreTd){
+          const ore = Number(oreTd.textContent||0);
+          empHoursCache.set(Number(id), ore);
+        }
       });
-    }
-  }
-  return items;
-}
 
-function closeEmployeeDetail(){
-  document.getElementById('empDetail').classList.remove('open');
-}
-document.getElementById('closeEmpDetail').addEventListener('click', closeEmployeeDetail);
-document.getElementById('empDetail').addEventListener('click', (e)=>{
-  if(e.target.id==='empDetail') closeEmployeeDetail();
-});
-
-async function renderDetailList(){
-  const listEl = document.getElementById('empDetailList');
-  listEl.innerHTML = `<div class="small">Caricamento…</div>`;
-  try{
-    const items = await loadUpcomingShifts(currentEmpId);
-    listEl.innerHTML = items.map(it=>{
-      const when = itDate(it.date);
-      const body = it.off ? `<span class="badge">OFF</span>` :
-        `<strong>${it.start}–${it.end}</strong>${
-          it.brk?` <span class="sub">(${it.paid?'pausa pagata':'pausa'} ${it.brk}’)</span>`:''}`;
-      return `<div class="item"><div class="when">${when}</div><div>${body}</div></div>`;
-    }).join('');
-  }catch(e){
-    listEl.innerHTML = `<div class="small" style="color:#b00020">Errore: ${e.message||e}</div>`;
-  }
-}
-
-function openEmployeeDetail(empId){
-  currentEmpId = empId;
-  const emp = employees.find(e => String(e.id)===String(empId));
-  if(!emp) return;
-
-  document.getElementById('empDetailName').textContent = emp.name || '—';
-  document.getElementById('empDetailRole').textContent = emp.role || '—';
-  document.getElementById('empDetailDep').textContent  = emp.department || '—';
-  document.getElementById('empDetailAvatar').textContent = (emp.name||'').split(/\s+/).map(s=>s[0]).join('').slice(0,2).toUpperCase();
-  document.getElementById('empDetailHours').textContent = Math.round((empHoursCache.get(emp.id)||0));
-
-  document.getElementById('btnAutoMonthEmp').onclick = async ()=>{
-    try{ await autoAssignMonthFor(emp.id); await reloadWeek(); await loadEmployeesMonth(); await renderDetailList(); alert('Turni del mese generati.'); }
-    catch(e){ alert(e.message||e); }
-  };
-  document.getElementById('btnAutoYearEmp').onclick = async ()=>{
-    try{ await autoAssignYearFor(emp.id); await reloadWeek(); await loadEmployeesMonth(); await renderDetailList(); alert('Turni dell’anno generati.'); }
-    catch(e){ alert(e.message||e); }
-  };
-  document.getElementById('btnGotoTable').onclick = ()=>{
-    const row = document.querySelector(`#tblEmployees tbody tr[data-id="${emp.id}"]`);
-    if(row){
-      row.classList.add('hl');
-      document.querySelector('.table-wrap')?.scrollTo({ top: row.offsetTop-60, behavior:'smooth' });
-      setTimeout(()=> row.classList.remove('hl'), 2000);
-    }
-    closeEmployeeDetail();
-  };
-
-  renderDetailList();
-  document.getElementById('empDetail').classList.add('open');
-}
-
-// --- Hook a la tabla para abrir detalle por fila ---
-const _loadEmployeesMonth = loadEmployeesMonth;
-loadEmployeesMonth = async function(){
-  await _loadEmployeesMonth(); // lo tuyo de siempre
-
-  // guarda horas en cache + data-id en filas
-  empHoursCache = new Map();
-  [...document.querySelectorAll('#tblEmployees tbody tr')].forEach(tr=>{
-    const id = tr.getAttribute('data-id');
-    const oreTd = tr.querySelector('td.right');
-    if(id && oreTd){
-      const ore = Number(oreTd.textContent||0);
-      empHoursCache.set(Number(id), ore);
-    }
-  });
-
-  // listeners
-  document.querySelectorAll('#tblEmployees tbody tr').forEach(tr=>{
-    const id = tr.getAttribute('data-id');
-    if(!id) return;
-    tr.style.cursor='pointer';
-    tr.addEventListener('click', ()=> openEmployeeDetail(id));
-  });
-};
-    
+      document.querySelectorAll('#tblEmployees tbody tr').forEach(tr=>{
+        const id = tr.getAttribute('data-id');
+        if(!id) return;
+        tr.style.cursor='pointer';
+        tr.addEventListener('click', ()=> openEmployeeDetail(id));
+      });
+    };
   </script>
 </body>
 </html>
