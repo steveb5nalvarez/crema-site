@@ -57,6 +57,17 @@
     .status{display:flex;gap:10px;align-items:center;color:#667085;font-size:13px;margin-top:8px}
     .status .dot{width:8px;height:8px;border-radius:999px;background:#10b981}
     .status.error .dot{background:#ef4444}
+
+    /* Personale */
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    @media (max-width:900px){ .grid2{grid-template-columns:1fr} }
+    .small{font-size:.9rem;color:#475569}
+    .pill{background:#fff;border:1px solid var(--border);border-radius:999px;padding:6px 10px}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .row .input, .row select { padding:10px 12px; border:1px solid var(--border); border-radius:10px; }
+    .table-mini{width:100%;border-collapse:separate;border-spacing:0}
+    .table-mini th, .table-mini td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:14px}
+    .badge{display:inline-block;background:#f8fafc;border:1px solid var(--border);border-radius:999px;padding:2px 8px;font-size:12px}
   </style>
 </head>
 
@@ -77,7 +88,60 @@
 
   <!-- app hidden finché non validiamo il ruolo -->
   <main class="wrap" id="app" hidden>
-    <div class="card">
+
+    <!-- ====== REPARTO PERSONALE ====== -->
+    <div class="card" id="card-personale">
+      <h1>Personale</h1>
+      <p class="subtitle">Aggiungi nuovi dipendenti. Dopo la creazione potrai programmare i turni settimanali.</p>
+
+      <div class="grid2">
+        <!-- Form nuovo dipendente -->
+        <section>
+          <h3 style="margin:0 0 10px">Aggiungi dipendente</h3>
+          <div class="row" id="emp-form">
+            <input id="fullName" class="input" placeholder="Nome e cognome" style="flex:1 1 220px">
+            <input id="email" class="input" placeholder="Email" style="flex:1 1 220px" type="email">
+            <input id="password" class="input" placeholder="Password" style="flex:1 1 160px" type="password">
+            <select id="department">
+              <option value="">Reparto…</option>
+              <option value="banco">Banco</option>
+              <option value="laboratorio">Laboratorio</option>
+            </select>
+            <input id="role" class="input" placeholder="Ruolo (es. Addetto banco)" style="flex:1 1 200px">
+            <button class="btn secondary" id="btnCreateEmp">+ Crea</button>
+          </div>
+          <div class="small" id="emp-msg" style="margin-top:8px"></div>
+        </section>
+
+        <!-- Lista dipendenti e ore mese -->
+        <section>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <h3 style="margin:0">Elenco dipendenti</h3>
+            <button class="btn" id="btnReloadEmp">Ricarica</button>
+            <span class="small" style="margin-left:auto">
+              Mese corrente: <span class="pill" id="monthLabel"></span>
+            </span>
+          </div>
+          <div class="table-wrap" style="border-radius:12px">
+            <table class="table-mini" id="tblEmployees">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Reparto</th>
+                  <th>Ruolo</th>
+                  <th>Stato</th>
+                  <th class="right">Ore mese</th>
+                </tr>
+              </thead>
+              <tbody id="empBody"><tr><td colspan="5" class="small">Caricamento…</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ====== PROGRAMMAZIONE TURNI ====== -->
+    <div class="card" style="margin-top:18px">
       <h1>Programmazione turni settimanale</h1>
       <p class="subtitle">Il manager può modificare giorno/ora o impostare <b>OFF</b>. La colonna finale mostra il <b>totale ore</b> settimanali.</p>
 
@@ -144,18 +208,30 @@
       const { data: prof, error } = await supabase.from('profiles').select('role, full_name').eq('user_id', user.id).single();
       if(error || !prof){ location.href="/login.html"; return false; }
       if(prof.role !== 'manager'){ location.href="/employee.html"; return false; }
-      // hint en brand
       const brand = document.querySelector('.brand'); if(brand && prof.full_name) brand.title = `Manager: ${prof.full_name}`;
       return true;
     }
 
-    // DOM refs
+    // ======== REFS ========
     const app = document.getElementById('app');
+
+    // Personale
+    const fullNameEl = document.getElementById('fullName');
+    const emailEl = document.getElementById('email');
+    const passwordEl = document.getElementById('password');
+    const departmentEl = document.getElementById('department');
+    const roleEl = document.getElementById('role');
+    const btnCreateEmp = document.getElementById('btnCreateEmp');
+    const btnReloadEmp = document.getElementById('btnReloadEmp');
+    const empMsg = document.getElementById('emp-msg');
+    const empBody = document.getElementById('empBody');
+    const monthLabel = document.getElementById('monthLabel');
+
+    // Turni
     const tbody = document.querySelector('#schedule tbody');
     const skel  = document.getElementById('skel');
     const statusRow = document.getElementById('status');
     const statusText = document.getElementById('statusText');
-
     const managerMode = document.getElementById('managerMode');
     const saveBtn = document.getElementById('saveBtn');
     const weekStartInp = document.getElementById('weekStart');
@@ -163,22 +239,25 @@
     const matesBanco = document.getElementById('mates-banco');
     const matesLab = document.getElementById('mates-lab');
 
-    // Utils
+    // ======== UTILS ========
     const toISO = d => d.toISOString().slice(0,10);
     const addDays = (d,n)=>{const x=new Date(d); x.setDate(x.getDate()+n); return x;};
     const startOfWeek = d => {const x=new Date(d); const w=(x.getDay()+6)%7; x.setDate(x.getDate()-w); x.setHours(0,0,0,0); return x;};
     const range7 = from => Array.from({length:7},(_,i)=>addDays(from,i));
     const hhmm = t => (t||'').slice(0,5);
-    const parseHours = (span)=>{
+    const ym = (d)=> `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const monthRange = (d)=>{ const from = new Date(d.getFullYear(), d.getMonth(), 1); const to = new Date(d.getFullYear(), d.getMonth()+1, 0); return [toISO(from), toISO(to)]; };
+
+    function parseHours(span){
       if(!span || /off/i.test(span)) return 0;
       const m=span.match(/(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})/);
       if(!m) return 0;
       const s=+m[1]*60+ +m[2]; let e=+m[3]*60+ +m[4]; let diff=e-s; if(diff<0) diff+=1440; return diff/60;
-    };
+    }
     const initials = name => (name||'').split(/\s+/).map(s=>s[0]).join('').slice(0,2).toUpperCase();
     const empCell = (name,role)=>`<div class="emp"><div class="avatar">${initials(name)}</div><div><div class="name">${name}</div><small>${role||''}</small></div></div>`;
 
-    // Estado
+    // ======== STATO ========
     let employees = [];
     let shifts = [];
     let weekStart = startOfWeek(new Date());
@@ -186,13 +265,18 @@
     const edits = new Map(); // `${empId}-${idx}` -> "OFF" | "HH:MM-HH:MM"
     let rpcAvailable = true;
 
-    // API (Supabase)
+    // ======== API ========
     async function getEmployees(){
-      const { data, error } = await supabase.from('employees').select('*').eq('is_active', true).order('name',{ascending:true});
+      const { data, error } = await supabase.from('employees')
+        .select('id, user_id, name, role, department, is_active')
+        .order('is_active',{ascending:false})
+        .order('name',{ascending:true});
       if (error) throw error; return data || [];
     }
     async function getShifts(fromISO, toISOstr){
-      const { data, error } = await supabase.from('shifts').select('*').gte('date', fromISO).lte('date', toISOstr);
+      const { data, error } = await supabase.from('shifts')
+        .select('id, employee_id, date, start_time, end_time, break_minutes, break_paid, off')
+        .gte('date', fromISO).lte('date', toISOstr);
       if (error) throw error; return data || [];
     }
     async function saveShiftsBulk(items){
@@ -200,7 +284,104 @@
       if (error) throw error; return data;
     }
 
-    // Render settimana
+    // === Personale: crea dipendente via server (richiede token di Supabase nel Bearer) ===
+    async function createEmployee(){
+      empMsg.textContent = '';
+      const full_name = fullNameEl.value.trim();
+      const email = emailEl.value.trim();
+      const password = passwordEl.value;
+      const role = roleEl.value.trim() || null;
+      const department = departmentEl.value || null;
+
+      if(!full_name || !email || !password){ empMsg.style.color='#b00020'; empMsg.textContent='Compila nome, email e password.'; return; }
+
+      btnCreateEmp.disabled = true; const old=btnCreateEmp.textContent; btnCreateEmp.textContent='Creazione…';
+      try{
+        // token Supabase del manager
+        const { data:{ session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if(!token){ location.href='/login.html'; return; }
+
+        const res = await fetch('/api/admin/create-employee', {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ fullName: full_name, email, password, role, department })
+        });
+        const out = await res.text();
+        if(!res.ok){ throw new Error(out || 'Errore creazione dipendente'); }
+
+        empMsg.style.color='#0f9d58';
+        empMsg.textContent='Dipendente creato correttamente!';
+        fullNameEl.value=''; emailEl.value=''; passwordEl.value=''; roleEl.value=''; departmentEl.value='';
+        await loadEmployeesMonth();
+      }catch(e){
+        empMsg.style.color='#b00020';
+        empMsg.textContent = e.message || e;
+      }finally{
+        btnCreateEmp.disabled=false; btnCreateEmp.textContent=old;
+      }
+    }
+
+    // === Personale: lista + ore mese corrente ===
+    function monthLabelText(d){
+      const intl = new Intl.DateTimeFormat('it-IT',{ month:'long', year:'numeric' });
+      return intl.format(d);
+    }
+
+    async function loadEmployeesMonth(){
+      empBody.innerHTML = `<tr><td colspan="5" class="small">Caricamento…</td></tr>`;
+      const now = new Date();
+      monthLabel.textContent = monthLabelText(now);
+      const [fromISO, toISOstr] = monthRange(now);
+
+      try{
+        const list = await getEmployees();
+        // carico i turni del mese per tutti
+        const monthShifts = await getShifts(fromISO, toISOstr);
+
+        // mappa ore per dipendente
+        const hoursByEmp = new Map();
+        for(const s of monthShifts){
+          if (s.off) continue;
+          const start = s.start_time?.slice(0,5);
+          const end   = s.end_time?.slice(0,5);
+          if(!start || !end) continue;
+          let h = parseHours(`${start}-${end}`);
+          // pausa: se break_paid è true, non sottraggo; altrimenti sottraggo minuti pausa
+          const paid = (typeof s.break_paid === 'boolean') ? s.break_paid : false;
+          const brk = Number(s.break_minutes||0);
+          if (!paid) h -= brk/60;
+          if (h<0) h=0;
+          hoursByEmp.set(s.employee_id, (hoursByEmp.get(s.employee_id)||0) + h);
+        }
+
+        // render
+        empBody.innerHTML = '';
+        for(const emp of list){
+          const tr = document.createElement('tr');
+          const rep = emp.department ? `<span class="badge">${emp.department}</span>` : '—';
+          const role = emp.role || '—';
+          const stato = emp.is_active ? '<span class="badge">attivo</span>' : '<span class="badge">non attivo</span>';
+          const ore = Math.round(hoursByEmp.get(emp.id)||0);
+          tr.innerHTML = `
+            <td>${emp.name}</td>
+            <td>${rep}</td>
+            <td>${role}</td>
+            <td>${stato}</td>
+            <td class="right">${ore}</td>
+          `;
+          empBody.appendChild(tr);
+        }
+
+        if(!empBody.children.length){
+          empBody.innerHTML = `<tr><td colspan="5" class="small">Nessun dipendente.</td></tr>`;
+        }
+      }catch(e){
+        empBody.innerHTML = `<tr><td colspan="5" class="small" style="color:#b00020">Errore: ${e.message||e}</td></tr>`;
+      }
+    }
+
+    // ======== TURNI (settimana) ========
     function renderWeek(){
       tbody.innerHTML = '';
       const dayKeys = range7(weekStart).map(d=>toISO(d));
@@ -269,7 +450,6 @@
       tr.querySelector('.right').textContent = Math.round(tot).toString();
     }
 
-    // Colleghi oggi
     function renderMates(){
       const idx = Number(matesDaySel.value)||0;
       const dayISO = toISO(addDays(weekStart, idx));
@@ -289,7 +469,6 @@
       matesLab.innerHTML   = lab.length   ? lab.join(' ')   : '— nessun turno —';
     }
 
-    // Salvar cambios
     async function saveChanges(){
       if (edits.size===0) return;
       if (!rpcAvailable){ alert("Funzione bulk non disponibile. Contatta l'amministratore."); return; }
@@ -317,6 +496,8 @@
         shifts = await getShifts(fromISO, toISOstr);
         renderWeek(); renderMates();
         statusText.textContent = 'Modifiche salvate';
+        // aggiorna ore mese (se la settimana è nel mese corrente)
+        await loadEmployeesMonth();
       }catch(err){
         console.error(err);
         statusRow.classList.add('error');
@@ -328,7 +509,7 @@
       }
     }
 
-    // Eventi
+    // ======== EVENTI ========
     document.getElementById('prevW').addEventListener('click', async ()=>{
       weekStart = addDays(weekStart, -7); weekStartInp.value = toISO(weekStart);
       await reloadWeek();
@@ -346,13 +527,15 @@
       await reloadWeek();
     });
     managerMode.addEventListener('change', ()=>{
-      // rehace contentEditable de las celdas
       [...tbody.querySelectorAll('td[data-day-idx]')].forEach(td=>{
         td.contentEditable = managerMode.checked ? 'true' : 'false';
       });
     });
     saveBtn.addEventListener('click', saveChanges);
     matesDaySel.addEventListener('change', renderMates);
+
+    btnCreateEmp.addEventListener('click', createEmployee);
+    btnReloadEmp.addEventListener('click', loadEmployeesMonth);
 
     async function reloadWeek(){
       try{
@@ -366,7 +549,7 @@
       }
     }
 
-    // Init
+    // ======== INIT ========
     (async function init(){
       const ok = await ensureManager();
       if(!ok) return;
@@ -374,7 +557,7 @@
       app.hidden = false;
       skel.style.display = 'block';
 
-      // probar disponibilidad de RPC
+      // RPC avail
       try {
         await supabase.rpc('upsert_shifts_bulk', { payload: { items: [] } });
         rpcAvailable = true;
@@ -388,6 +571,7 @@
       try{
         employees = await getEmployees();
         await reloadWeek();
+        await loadEmployeesMonth();
         statusText.textContent = 'Pronto';
       }catch(err){
         console.error(err);
