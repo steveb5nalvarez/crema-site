@@ -206,3 +206,25 @@ img { max-width: 100%; height: auto; display: block; }
 @media (max-width:640px){
   .modal-content{ border-radius:12px; }
 }
+
+/* ===== Employee Detail Sheet (mobile-first) ===== */
+.sheet2{position:fixed;inset:0;display:none;z-index:999;background:rgba(0,0,0,.35)}
+.sheet2.open{display:block}
+.sheet2 .panel{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:18px 18px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.18);max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
+@media (min-width:900px){ .sheet2 .panel{left:50%;transform:translateX(-50%);bottom:auto;top:8%;max-width:640px;border-radius:18px} }
+.sheet2 .head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border)}
+.sheet2 .head .title{font-weight:800;font-size:18px;margin-left:auto}
+.sheet2 .body{padding:14px 16px;overflow:auto}
+.sheet2 .row{display:flex;gap:10px;align-items:center}
+.sheet2 .meta .k{color:#667085;font-size:12px}
+.sheet2 .meta .v{font-weight:700}
+.sheet2 .actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 6px}
+.sheet2 .list{display:grid;gap:8px;margin-top:8px}
+.item{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border);border-radius:12px;background:#fff;padding:10px 12px}
+.item .when{font-weight:700}
+.item .sub{color:#667085;font-size:12px;margin-top:2px}
+.item .badge{margin-left:6px}
+.hl{animation:flash 2s ease 1}
+@keyframes flash{0%{box-shadow:0 0 0 3px rgba(238,117,35,.4)}100%{box-shadow:none}}
+
+
