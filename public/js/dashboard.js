@@ -101,7 +101,10 @@ document.addEventListener('DOMContentLoaded', () => {
           <td class="px-2 py-1">${start}</td>
           <td class="px-2 py-1">${end}</td>
           <td class="px-2 py-1">${ore}h</td>
-          <td class="px-2 py-1 text-red-600 cursor-pointer">🗑️</td>
+          <td class="px-2 py-1 flex gap-2">
+            <span class="edit-shift cursor-pointer text-blue-600" data-id="${shift.id}" data-date="${shift.date}" data-name="${shift.employees.name}" data-start="${shift.start_time}" data-end="${shift.end_time}" data-role="${shift.role}">📝</span>
+            <span class="delete-shift cursor-pointer text-red-600" data-id="${shift.id}">🗑️</span>
+          </td>
         </tr>
       `;
     });
@@ -181,6 +184,52 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
     });
   }
+
+  // 👉 Modal di modifica turno
+  document.addEventListener('click', (e) => {
+    if (e.target.matches('.edit-shift')) {
+      const modal = document.getElementById('editShiftModal');
+      modal.classList.remove('hidden');
+
+      document.getElementById('editShiftForm').dataset.id = e.target.dataset.id;
+      document.getElementById('editShiftDate').value = e.target.dataset.date;
+      document.getElementById('editShiftName').value = e.target.dataset.name;
+      document.getElementById('editShiftStart').value = e.target.dataset.start;
+      document.getElementById('editShiftEnd').value = e.target.dataset.end;
+      document.getElementById('editShiftRole').value = e.target.dataset.role;
+    }
+  });
+
+  document.getElementById('closeEditModal').addEventListener('click', () => {
+    document.getElementById('editShiftModal').classList.add('hidden');
+  });
+
+  document.getElementById('editShiftForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const id = e.target.dataset.id;
+    const date = document.getElementById('editShiftDate').value;
+    const name = document.getElementById('editShiftName').value;
+    const start = document.getElementById('editShiftStart').value;
+    const end = document.getElementById('editShiftEnd').value;
+    const role = document.getElementById('editShiftRole').value;
+
+    const { error } = await supabase.from('shifts').update({
+      date,
+      start_time: start,
+      end_time: end,
+      role
+    }).eq('id', id);
+
+    if (error) {
+      alert('Errore nel salvataggio modifiche');
+      console.error(error);
+    } else {
+      alert('Modifica salvata!');
+      document.getElementById('editShiftModal').classList.add('hidden');
+      loadShifts();
+    }
+  });
 
   // 🟢 Cargar todo al inicio
   loadEmployees();
