@@ -3,55 +3,89 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>CREMA – Login</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css"/>
-  <link rel="icon" href="https://gelatocrema.com/cdn/shop/files/logo_color.svg?v=1693061670"/>
+  <title>Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    body {
-      background-color: #1e40af; /* Blue background */
+    :root{
+      --bg1:#0a66ff;
+      --bg2:#0a2bff;
+      --card:#ffffff14;
+      --card-border:#ffffff33;
+      --text:#eef2ff;
+      --muted:#bcd3ff;
+      --input:#ffffffdd;
+      --primary:#0b2a4a;
+      --primary-contrast:#ffffff;
+      --shadow: 0 10px 40px rgba(0,0,0,.25);
     }
-    .input-field::placeholder {
-      color: white;
-      text-transform: uppercase;
-      letter-spacing: 1px;
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+      color:var(--text);
+      background: radial-gradient(1200px 600px at 15% 10%, #2b8eff55 0%, transparent 60%),
+                  radial-gradient(1200px 700px at 85% 20%, #1d4ed855 0%, transparent 60%),
+                  linear-gradient(145deg, var(--bg1), var(--bg2));
+      display:grid; place-items:center;
+      overflow:hidden;
     }
+
+    .blobs{position:fixed; inset:0; filter: blur(24px); pointer-events:none; opacity:.65}
+    .blob{position:absolute; width:420px; height:420px; border-radius:50%; background:#6aa7ff; mix-blend: screen;}
+    .blob.b1{top:-60px; left:-80px; background:#79b0ff}
+    .blob.b2{bottom:-120px; right:-40px; background:#3c8dff}
+    .blob.b3{top:40%; right:10%; width:300px; height:300px; background:#8cc0ff}
+
+    .card{
+      width:min(92vw, 420px);
+      background:var(--card);
+      border:1px solid var(--card-border);
+      box-shadow: var(--shadow);
+      border-radius:22px;
+      backdrop-filter: blur(18px) saturate(120%);
+      -webkit-backdrop-filter: blur(18px) saturate(120%);
+      padding:28px; 
+    }
+    .brand{ text-align:center; font-weight:800; letter-spacing:.3px; font-size:1.1rem; opacity:.95; margin-top:6px }
+    h1{ margin:14px 0 18px; font-size:1.6rem; font-weight:700 }
+
+    label{ display:block; font-size:.9rem; color:var(--muted); margin:12px 0 8px }
+    .input{ width:100%; padding:12px 14px; border-radius:12px; border:1px solid #ffffff55; background:var(--input); color:#0f172a; outline:none; box-shadow: inset 0 1px 0 #ffffffc7, 0 0 0 0 rgba(49,132,253,.25); transition: box-shadow .18s ease, transform .05s }
+    .input::placeholder{ color:#64748b }
+    .input:focus{ box-shadow: 0 0 0 4px #60a5fa55, inset 0 1px 0 #fff }
+
+    .btn{ width:100%; margin-top:16px; border:0; border-radius:14px; padding:12px 16px; font-weight:700; background:#0f2a45; color:var(--primary-contrast); cursor:pointer; box-shadow: 0 8px 20px rgba(5,25,56,.35); transition: transform .06s ease, box-shadow .18s ease, filter .18s }
+    .btn:hover{ filter:brightness(1.05) }
+    .btn:active{ transform: translateY(1px) }
+    #msg { min-height:1.25em; color:#ffbaba; text-align:center; margin-top:10px; }
+    .hint { font-size:.85rem; color:#e0e7ff; text-align:center; margin-top:6px; }
   </style>
 </head>
-<body class="flex items-center justify-center min-h-screen text-white">
-  <div class="flex flex-col items-center w-full max-w-sm p-6">
-    <!-- Icon -->
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-10" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="1.5">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.6 8M17 13l1.6 8M9 21h6" />
-    </svg>
-
-    <!-- Login Form -->
-    <form id="login-form" class="w-full space-y-4">
-      <div class="relative">
-        <input id="email" type="email" placeholder="USERNAME" class="input-field w-full border border-white rounded-md bg-transparent px-10 py-2 focus:outline-none focus:ring-2 focus:ring-white placeholder-white" required>
-        <div class="absolute left-3 top-2.5 text-white">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M10 2a5 5 0 00-5 5v1a5 5 0 1010 0V7a5 5 0 00-5-5zM3 14a7 7 0 0114 0v1H3v-1z" />
-          </svg>
-        </div>
-      </div>
-
-      <div class="relative">
-        <input id="password" type="password" placeholder="PASSWORD" class="input-field w-full border border-white rounded-md bg-transparent px-10 py-2 focus:outline-none focus:ring-2 focus:ring-white placeholder-white" required>
-        <div class="absolute left-3 top-2.5 text-white">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M5 8a5 5 0 1110 0v2h1a1 1 0 011 1v7a1 1 0 01-1 1H4a1 1 0 01-1-1v-7a1 1 0 011-1h1V8zm6 4a1 1 0 10-2 0 1 1 0 002 0z" clip-rule="evenodd" />
-          </svg>
-        </div>
-      </div>
-
-      <div id="msg" class="text-sm text-red-300 h-5"></div>
-
-      <button type="submit" id="btnLogin" class="w-full bg-white text-blue-800 font-semibold py-2 rounded-md shadow-md hover:bg-gray-100">LOGIN</button>
-
-      <p class="text-center text-sm underline mt-2 cursor-pointer">Forgot password?</p>
-      <p id="postLoginHint" class="text-xs text-center text-white hidden">Accesso riuscito, reindirizzamento…</p>
-    </form>
+<body>
+  <div class="blobs" aria-hidden="true">
+    <div class="blob b1"></div>
+    <div class="blob b2"></div>
+    <div class="blob b3"></div>
   </div>
+
+  <main class="card" role="main">
+    <div class="brand">easyCrew</div>
+    <h1>Login</h1>
+
+    <form id="login-form" novalidate>
+      <label for="email">Email</label>
+      <input class="input" id="email" name="email" type="email" placeholder="username@gmail.com" required />
+
+      <label for="password">Password</label>
+      <input class="input" id="password" name="password" type="password" placeholder="Password" required />
+
+      <button class="btn" id="btnLogin" type="submit">Sign in</button>
+      <div id="msg"></div>
+      <p class="hint" id="postLoginHint" style="display:none">Accesso riuscito, reindirizzamento…</p>
+    </form>
+  </main>
 
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
@@ -61,12 +95,12 @@
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjZm1lZ2dxaHhjbmloa21ua3FzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxOTAzMjUsImV4cCI6MjA3Mjc2NjMyNX0.VYkrvIVWti57W9UOnQcCvywmonWGyrtIT4KAzszbiFs"
     );
 
-    const form   = document.getElementById('login-form');
-    const email  = document.getElementById('email');
-    const pass   = document.getElementById('password');
-    const btn    = document.getElementById('btnLogin');
-    const msg    = document.getElementById('msg');
-    const hint   = document.getElementById('postLoginHint');
+    const form = document.getElementById('login-form');
+    const email = document.getElementById('email');
+    const pass = document.getElementById('password');
+    const btn = document.getElementById('btnLogin');
+    const msg = document.getElementById('msg');
+    const hint = document.getElementById('postLoginHint');
 
     async function redirectByRole() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -81,13 +115,13 @@
       if (error || !profile) {
         msg.textContent = "Profilo non trovato. Contatta il manager.";
         btn.disabled = false;
-        btn.textContent = 'LOGIN';
+        btn.textContent = 'Sign in';
         return;
       }
 
       hint.style.display = 'block';
 
-      switch(profile.role) {
+      switch (profile.role) {
         case 'admin':
           window.location.href = "/admin.html";
           break;
@@ -100,37 +134,48 @@
         default:
           msg.textContent = "Ruolo sconosciuto.";
           btn.disabled = false;
-          btn.textContent = 'LOGIN';
+          btn.textContent = 'Sign in';
       }
     }
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) redirectByRole();
+    });
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       msg.textContent = '';
       hint.style.display = 'none';
+
+      const emailVal = email.value.trim();
+      const passVal = pass.value;
+
+      if (!emailVal || !passVal) {
+        msg.textContent = "Inserisci email e password";
+        return;
+      }
+
       btn.disabled = true;
       const oldLabel = btn.textContent;
       btn.textContent = 'Caricamento…';
 
-      const { error } = await supabase.auth.signInWithPassword({
-        email: email.value.trim(),
-        password: pass.value
-      });
-
-      if (error) {
-        msg.textContent = error.message || "Credenziali non valide";
+      try {
+        const { error } = await supabase.auth.signInWithPassword({ email: emailVal, password: passVal });
+        if (error) {
+          msg.textContent = (error.message || 'Credenziali non valide');
+          btn.disabled = false;
+          btn.textContent = oldLabel;
+          return;
+        }
+        localStorage.setItem('crema:lastEmail', emailVal);
+        await redirectByRole();
+      } catch (err) {
+        console.error(err);
+        msg.textContent = 'Errore di rete';
         btn.disabled = false;
         btn.textContent = oldLabel;
-        return;
       }
-
-      await redirectByRole();
     });
-
-    window.logout = async function() {
-      await supabase.auth.signOut();
-      location.href = "/login.html";
-    };
   </script>
 </body>
 </html>
