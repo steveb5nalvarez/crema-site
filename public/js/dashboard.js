@@ -1,4 +1,5 @@
 // dashboard.js
+
 document.addEventListener('DOMContentLoaded', () => {
   const openBtn = document.getElementById('openEmployeeForm');
   const closeBtn = document.getElementById('closeModal');
@@ -46,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const { data, error } = await supabase.from('employees').select('*');
     if (error) return console.error(error);
 
-    employeeNameSelect.innerHTML = data.map(emp => `<option value="${emp.name}">${emp.name}</option>`).join('');
+    employeeNameSelect.innerHTML = data.map(emp => `<option value="${emp.id}">${emp.name}</option>`).join('');
     loadEmployeeTable(data);
   }
 
@@ -54,18 +55,18 @@ document.addEventListener('DOMContentLoaded', () => {
   shiftForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const date = document.getElementById('shiftDate').value;
-    const name = document.getElementById('employeeName').value;
+    const employee_id = document.getElementById('employeeName').value;
     const start = document.getElementById('startTime').value;
     const end = document.getElementById('endTime').value;
     const role = document.getElementById('role').value;
 
-    if (!date || !name || !start || !end || !role) {
+    if (!date || !employee_id || !start || !end || !role) {
       alert('Completa tutti i campi.');
       return;
     }
 
     const { error } = await supabase.from('shifts').insert([
-      { employee_name: name, date, start_time: start, end_time: end, role }
+      { employee_id, date, start_time: start, end_time: end, role }
     ]);
 
     if (error) {
@@ -78,7 +79,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 👉 Mostrar turni nella tabella
   async function loadShifts() {
-    const { data, error } = await supabase.from('shifts').select('*').order('date');
+    const { data, error } = await supabase
+      .from('shifts')
+      .select('*, employees(name)')
+      .order('date');
+
     if (error) return console.error(error);
 
     const tbody = document.getElementById('shiftBody');
@@ -91,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tbody.innerHTML += `
         <tr>
           <td class="px-2 py-1">${shift.date}</td>
-          <td class="px-2 py-1">${shift.employee_name}</td>
+          <td class="px-2 py-1">${shift.employees.name}</td>
           <td class="px-2 py-1">${shift.role}</td>
           <td class="px-2 py-1">${start}</td>
           <td class="px-2 py-1">${end}</td>
@@ -116,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       list.innerHTML = '';
       todayShifts.forEach(s => {
-        list.innerHTML += `<li>${s.employee_name} (${s.start_time.slice(0,5)}–${s.end_time.slice(0,5)})</li>`;
+        list.innerHTML += `<li>${s.employees.name} (${s.start_time.slice(0,5)}–${s.end_time.slice(0,5)})</li>`;
       });
     }
   }
@@ -125,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderCalendar(shifts) {
     const calendarEl = document.getElementById('calendar');
     const events = shifts.map(s => ({
-      title: s.employee_name,
+      title: s.employees.name,
       start: s.date,
       allDay: true
     }));
@@ -148,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
           ul.innerHTML = '<li>Nessuno lavora questo giorno.</li>';
         } else {
           dayShifts.forEach(s => {
-            ul.innerHTML += `<li>${s.employee_name} (${s.start_time.slice(0,5)}–${s.end_time.slice(0,5)})</li>`;
+            ul.innerHTML += `<li>${s.employees.name} (${s.start_time.slice(0,5)}–${s.end_time.slice(0,5)})</li>`;
           });
         }
 
