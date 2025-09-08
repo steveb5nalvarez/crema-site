@@ -25,8 +25,16 @@
     <script type="module" src="/js/dashboard.js"></script>
 
     <style>
+      html, body { height: 100%; }
       body {
-        background-color: #fefce8;
+        background: radial-gradient(1200px 800px at 30% -10%, #4f77ff 0%, rgba(79,119,255,0.4) 40%, transparent 60%),
+                    linear-gradient(180deg, #0b48ef 0%, #0a2aa0 60%, #08206b 100%);
+        background-attachment: fixed;
+      }
+      .card-white {
+        background: #ffffff;
+        border-radius: 0.5rem;
+        box-shadow: 0 6px 18px rgba(0,0,0,.08);
       }
     </style>
   </head>
@@ -34,27 +42,38 @@
   <body class="font-sans text-gray-900">
     <!-- Header -->
     <header class="sticky top-0 z-50 bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between shadow-sm">
-      <img src="https://gelatocrema.com/cdn/shop/files/logo_color.svg?v=1693061670&width=100" alt="CREMA Logo" class="h-10">
+      <!-- LOGO CAMBIADO -->
+      <div class="flex items-center">
+        <span class="text-2xl font-bold text-blue-700 tracking-wide">easyCrew</span>
+      </div>
       <div class="flex gap-2">
         <button class="text-sm px-3 py-1 rounded-full bg-gray-100" onclick="location.href='/index.html'">Sito</button>
         <button class="text-sm px-3 py-1 rounded-full bg-gray-100" onclick="location.href='/employee.html'">Dipendente</button>
-        <button class="text-sm px-3 py-1 rounded-full bg-orange-500 text-white" onclick="logout()">Logout</button>
+        <button class="text-sm px-3 py-1 rounded-full bg-blue-600 text-white" onclick="logout()">Logout</button>
       </div>
     </header>
 
     <main class="max-w-6xl mx-auto p-4 space-y-10">
 
-      <!-- 🔶 Chi lavora oggi -->
-      <section class="bg-white p-4 rounded shadow">
+      <!-- 🔵 Chi lavora oggi -->
+      <section class="card-white p-4">
         <h2 class="text-lg font-semibold mb-2">Chi lavora oggi</h2>
         <ul id="todayWorkersList" class="list-disc list-inside text-sm text-gray-700">
           <li>Caricamento...</li>
         </ul>
+
+        <div class="mt-3">
+          <h3 class="font-semibold text-sm">Adesso stanno lavorando:</h3>
+          <ul id="nowWorkersList" class="list-disc list-inside text-sm text-gray-700"></ul>
+        </div>
       </section>
 
       <!-- 📅 Calendario mensile -->
-      <section class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-4">Calendario turni</h2>
+      <section class="card-white p-4">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-lg font-semibold">Calendario turni</h2>
+          <span id="currentMonthLabel" class="text-sm font-medium text-blue-700"></span>
+        </div>
         <div id="calendar"></div>
         <div id="selectedDayWorkers" class="mt-4 hidden">
           <h3 class="font-semibold">Chi lavora il <span id="selectedDate"></span>:</h3>
@@ -63,10 +82,10 @@
       </section>
 
       <!-- 📋 Assegna un turno -->
-      <section class="bg-white p-4 rounded shadow">
+      <section class="card-white p-4">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-semibold">Assegna un turno</h2>
-          <button id="openEmployeeForm" class="bg-orange-600 text-white px-3 py-1 rounded text-sm">+ Nuovo Dipendente</button>
+          <button id="openEmployeeForm" class="bg-blue-600 text-white px-3 py-1 rounded text-sm">+ Nuovo Dipendente</button>
         </div>
         <form id="shiftForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <input required type="date" id="shiftDate" class="border px-2 py-1 rounded" />
@@ -79,16 +98,16 @@
             <option value="Laboratorio">Laboratorio</option>
             <option value="Manager">Manager</option>
           </select>
-          <button class="bg-orange-600 text-white px-4 py-2 rounded" type="submit">Salva</button>
+          <button class="bg-blue-600 text-white px-4 py-2 rounded" type="submit">Salva</button>
         </form>
       </section>
 
       <!-- 🗓️ Tabella dei turni -->
-      <section class="bg-white p-4 rounded shadow">
+      <section class="card-white p-4">
         <h2 class="text-lg font-semibold mb-2">Turni programmati</h2>
         <div class="overflow-x-auto">
           <table class="min-w-full text-sm" id="shiftTable">
-            <thead class="bg-orange-600 text-white">
+            <thead class="bg-blue-600 text-white">
               <tr>
                 <th class="px-2 py-1 text-left">Data</th>
                 <th class="px-2 py-1 text-left">Nome</th>
@@ -105,7 +124,7 @@
       </section>
 
       <!-- 👥 Dipendenti -->
-      <section class="bg-white p-4 rounded shadow">
+      <section class="card-white p-4">
         <h2 class="text-lg font-semibold mb-2">Dipendenti registrati</h2>
         <div class="overflow-x-auto">
           <table class="min-w-full text-sm" id="employeeTable">
@@ -139,12 +158,11 @@
             <input required type="number" id="newHours" placeholder="Ore settimanali" class="w-full border px-3 py-2 rounded">
             <div class="flex justify-end gap-2 pt-2">
               <button type="button" id="closeModal" class="px-3 py-1 border rounded">Annulla</button>
-              <button type="submit" class="bg-orange-600 text-white px-4 py-1 rounded">Registra</button>
+              <button type="submit" class="bg-blue-600 text-white px-4 py-1 rounded">Registra</button>
             </div>
           </form>
         </div>
       </div>
     </main>
-
   </body>
 </html>
