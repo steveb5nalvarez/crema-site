@@ -144,7 +144,31 @@
           </form>
         </div>
       </div>
-    </main>
 
+      <!-- MODAL: Modifica turno -->
+      <div id="editShiftModal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg p-6 w-full max-w-md">
+          <h2 class="text-xl font-semibold mb-4">Modifica Turno</h2>
+          <form id="editShiftForm" class="space-y-3">
+            <input type="hidden" id="editShiftId">
+            <input required type="date" id="editShiftDate" class="w-full border px-3 py-2 rounded">
+            <select required id="editEmployeeName" class="w-full border px-3 py-2 rounded"></select>
+            <input required type="time" id="editStartTime" class="w-full border px-3 py-2 rounded">
+            <input required type="time" id="editEndTime" class="w-full border px-3 py-2 rounded">
+            <select required id="editRole" class="w-full border px-3 py-2 rounded">
+              <option value="">Ruolo</option>
+              <option value="Addetto banco">Addetto banco</option>
+              <option value="Laboratorio">Laboratorio</option>
+              <option value="Manager">Manager</option>
+            </select>
+            <div class="flex justify-end gap-2 pt-2">
+              <button type="button" id="cancelEditShift" class="px-3 py-1 border rounded">Annulla</button>
+              <button type="submit" class="bg-blue-600 text-white px-4 py-1 rounded">Salva modifiche</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+    </main>
   </body>
 </html>
