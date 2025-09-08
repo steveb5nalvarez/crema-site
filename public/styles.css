@@ -172,3 +172,48 @@ label {
   height: 300px;
   background: #8cc0ff;
 }
+
+
+/* styles.css */
+
+body {
+  font-family: 'Montserrat', sans-serif;
+  background: #f9fafb;
+  color: #333;
+  margin: 0;
+  padding: 0;
+}
+
+.nav {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 1rem;
+}
+
+.btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: #ddd;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.btn.primary {
+  background: #4f46e5;
+  color: white;
+}
+
+.card {
+  background: white;
+  padding: 1rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.footer {
+  background: #111;
+  color: white;
+  text-align: center;
+  padding: 2rem;
+  margin-top: 3rem;
+}
