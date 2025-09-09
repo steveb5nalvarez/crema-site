@@ -5,10 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>easyCrew | Dipendente</title>
 
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- FullCalendar -->
   <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.js"></script>
 
+  <!-- Supabase client -->
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
     window.supabase = createClient(
@@ -17,120 +21,113 @@
     );
   </script>
 
-  <script type="module" src="/js/employee.js"></script>
+  <!-- UI + lógica -->
+  <script type="module" src="/js/employee-ui.js"></script>
 
   <style>
     html, body { height: 100%; }
     body {
-      background: radial-gradient(1200px 800px at 30% -10%, #4f77ff 0%, rgba(79,119,255,0.4) 40%, transparent 60%),
-                  linear-gradient(180deg, #0b48ef 0%, #0a2aa0 60%, #08206b 100%);
-      background-attachment: fixed;
+      background: #f5f7fb;
     }
-    .card-white { background:#fff; border-radius:.5rem; box-shadow:0 6px 18px rgba(0,0,0,.08); }
+    /* Estilo del calendario según mock (gris con acentos azules) */
+    .fc .fc-toolbar-title { font-weight: 700; color: #1e3a8a; }
+    .fc .fc-daygrid-day-number { color: #1e3a8a; }
+    .fc .fc-col-header-cell-cushion { color: #1e3a8a; }
+    .fc .fc-daygrid-day { background: #efeff3; }
+    .fc .fc-day-today { background: #e6f0ff !important; }
+    .chip { background:#e8edff; color:#1e3a8a; font-weight:600; padding:2px 8px; border-radius:8px; }
+    .card { background:white; border-radius:16px; box-shadow:0 6px 18px rgba(0,0,0,.06); }
+    .btn-blue { background:#2563eb; color:#fff; border-radius:9999px; padding:.5rem 1rem; font-weight:700; }
+    .btn-pill { border-radius:9999px; }
     .avatar {
-      width: 40px; height: 40px; border-radius: 9999px; display: inline-flex;
-      align-items: center; justify-content: center; font-weight: 700; color: #fff; background:#2563eb;
+      width:72px; height:72px; border-radius:9999px; background:#1e3a8a; color:white;
+      display:flex; align-items:center; justify-content:center; font-size:28px; font-weight:800;
+    }
+    .arrow-btn {
+      width:56px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+      background:#e8edff; color:#1e3a8a; font-weight:800;
     }
   </style>
 </head>
 <body class="font-sans text-gray-900">
-  <header class="sticky top-0 z-50 bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between shadow-sm">
-    <span class="text-2xl font-bold text-blue-700 tracking-wide">easyCrew</span>
-    <div class="flex items-center gap-3">
-      <div id="avatarBox" class="avatar">EC</div>
-      <button class="text-sm px-3 py-1 rounded-full bg-blue-600 text-white" onclick="logout()">Logout</button>
+
+  <!-- HEADER -->
+  <header class="bg-white border-b border-gray-200">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      <span class="text-xl sm:text-2xl font-extrabold text-blue-800 tracking-wide">easyCrew</span>
+      <div class="flex items-center gap-2">
+        <button id="btnMessages" class="btn-blue text-sm">MESSAGGI</button>
+        <button id="btnLogout" class="btn-blue text-sm">LOGOUT</button>
+      </div>
     </div>
   </header>
 
-  <main class="max-w-6xl mx-auto p-4 space-y-6">
+  <main class="max-w-5xl mx-auto px-4 py-5 space-y-5">
 
     <!-- PERFIL -->
-    <section class="card-white p-4">
-      <div class="flex items-center gap-3">
-        <img id="avatarImg" class="hidden w-12 h-12 rounded-full object-cover" alt="avatar">
-        <div id="avatarInitials" class="avatar w-12 h-12 text-lg">EC</div>
-        <div>
-          <h2 class="text-lg font-semibold">
-            Ciao, <span id="empName">—</span> <span class="text-sm text-gray-500">(<span id="empRole">—</span>)</span>
-          </h2>
-          <p class="text-sm text-gray-600">Ore contratto/settimana: <span id="weeklyHours">—</span></p>
-        </div>
-      </div>
-    </section>
-
-    <!-- OGGI / ADESSO -->
-    <section class="card-white p-4">
-      <h3 class="text-lg font-semibold mb-2">Il mio turno di oggi</h3>
-      <ul id="todayShift" class="list-disc list-inside text-sm text-gray-700">
-        <li>Caricamento…</li>
-      </ul>
-      <div class="mt-3">
-        <h4 class="font-semibold text-sm">Sto lavorando adesso?</h4>
-        <p id="nowStatus" class="text-sm">—</p>
-      </div>
-    </section>
-
-    <!-- CALENDARIO + ORE MESE -->
-    <section class="card-white p-4">
-      <div class="flex items-center justify-between mb-2">
-        <h3 class="text-lg font-semibold">Calendario (il mio mese)</h3>
-        <span id="currentMonthLabel" class="text-sm font-medium text-blue-700"></span>
-      </div>
-      <div id="calendar"></div>
-    </section>
-
-    <section class="card-white p-4">
-      <h3 class="text-lg font-semibold mb-1">Ore totali nel mese</h3>
-      <p class="text-2xl font-bold"><span id="monthHours">0.0</span> h</p>
-      <p class="text-xs text-gray-500">*Calcolo con pausa 0.5h per turno</p>
-    </section>
-
-    <!-- CAMBIO DI TURNO -->
-    <section class="card-white p-4">
-      <div class="flex items-center justify-between mb-2">
-        <h3 class="text-lg font-semibold">Cambio turno</h3>
-        <span class="text-xs text-gray-500">Richieste (mie o dove sono partner)</span>
-      </div>
-
-      <div class="grid sm:grid-cols-2 gap-4">
-        <div>
-          <h4 class="font-semibold mb-1">Proponi uno scambio</h4>
-          <label class="text-sm block mb-1">Il mio turno</label>
-          <select id="myShiftSelect" class="border rounded px-2 py-1 w-full mb-2"></select>
-
-          <label class="text-sm block mb-1">Turno del collega</label>
-          <select id="partnerShiftSelect" class="border rounded px-2 py-1 w-full mb-2"></select>
-
-          <label class="text-sm block mb-1">Nota (opzionale)</label>
-          <input id="swapNote" class="border rounded px-2 py-1 w-full mb-2" placeholder="Motivo o messaggio"/>
-
-          <button id="btnProposeSwap" class="bg-blue-600 text-white px-3 py-1 rounded text-sm">Invia proposta</button>
-        </div>
-
-        <div>
-          <h4 class="font-semibold mb-1">Le mie richieste</h4>
-          <ul id="swapList" class="text-sm text-gray-700 space-y-2"></ul>
-        </div>
-      </div>
-    </section>
-
-    <!-- CHAT 1:1 -->
-    <section class="card-white p-4">
-      <h3 class="text-lg font-semibold mb-2">Chat privata</h3>
-      <div class="grid sm:grid-cols-3 gap-4">
-        <div class="sm:col-span-1">
-          <input id="searchEmp" class="border rounded px-2 py-1 w-full mb-2" placeholder="Cerca collega..."/>
-          <ul id="empList" class="text-sm text-gray-700 space-y-1 max-h-64 overflow-auto"></ul>
-        </div>
-        <div class="sm:col-span-2">
-          <div id="chatHeader" class="text-sm text-gray-500 mb-1">Seleziona un collega</div>
-          <div id="chatBox" class="border rounded p-2 h-64 overflow-auto bg-gray-50"></div>
-          <div class="mt-2 flex gap-2">
-            <input id="chatInput" class="border rounded px-2 py-1 flex-1" placeholder="Scrivi un messaggio..." />
-            <button id="chatSend" class="bg-blue-600 text-white px-3 py-1 rounded text-sm" disabled>Invia</button>
+    <section class="card p-4">
+      <div class="flex items-start gap-4">
+        <div id="avatar" class="avatar">EC</div>
+        <div class="flex-1">
+          <div class="text-blue-800 font-bold">ciao</div>
+          <div class="text-2xl font-extrabold leading-tight">
+            <span id="empFirst">[NOME]</span> <span id="empLast">[COGNOME]</span>
+          </div>
+          <div class="mt-1 flex items-center gap-3">
+            <div>
+              <span class="uppercase text-xs tracking-wide text-gray-500">RUOLO</span>
+              <div id="empRole" class="text-blue-700 text-sm font-semibold">—</div>
+            </div>
+            <span class="chip text-xs">ORE CONTRATTO: <span id="empWeekly">—</span></span>
           </div>
         </div>
       </div>
+    </section>
+
+    <!-- CALENDARIO -->
+    <section class="card p-4">
+      <div class="flex items-center justify-between">
+        <div class="text-blue-900 font-bold" id="monthTitle">—</div>
+        <div class="text-blue-900 opacity-60 text-lg">↔</div>
+      </div>
+      <div class="mt-2 rounded-2xl overflow-hidden">
+        <div id="calendar"></div>
+      </div>
+
+      <hr class="my-4 border-gray-300">
+
+      <div class="space-y-3" id="dayShifts">
+        <!-- Renglones de “LAVORA:” -->
+        <!-- Ejemplo:
+        <div>
+          <div class="uppercase text-xs text-gray-500">LAVORA :</div>
+          <div class="font-semibold">| 15:15–23:45 = NOME TRABAJADOR</div>
+          <div class="text-blue-700 text-xs">RUOLO</div>
+        </div>
+        -->
+      </div>
+    </section>
+
+    <!-- TOTAL ORE -->
+    <section class="card p-4">
+      <div class="flex items-center justify-between">
+        <div class="chip text-xs">Total Ore : <span id="monthLabel">—</span></div>
+      </div>
+      <div class="mt-1 text-4xl sm:text-5xl font-extrabold tracking-wide">
+        <span id="monthTotalHHMM">00:00</span> <span class="text-gray-700 text-2xl">H</span>
+      </div>
+    </section>
+
+    <!-- CAMBIO TURNO -->
+    <section class="card p-4">
+      <div class="text-sm font-bold text-blue-900">Cambio turno</div>
+      <div class="mt-2 grid grid-cols-[1fr_auto_1fr_auto] gap-2 items-center">
+        <select id="selMine" class="border rounded-lg px-3 py-2 text-sm bg-gray-50"></select>
+        <span class="text-blue-900 font-extrabold">⇄</span>
+        <select id="selOther" class="border rounded-lg px-3 py-2 text-sm bg-gray-50"></select>
+        <button id="btnSwap" class="arrow-btn">→</button>
+      </div>
+      <div id="swapHint" class="mt-2 text-xs text-gray-500">Seleziona il tuo turno e quello del collega, poi invia.</div>
     </section>
 
   </main>
